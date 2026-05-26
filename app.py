@@ -8,7 +8,6 @@ import json
 # ── PAGE CONFIG ────────────────────────────────────────
 st.set_page_config(
     page_title="RupeeRisk — India Forex Intelligence",
-    page_icon="📉",
     layout="wide"
 )
 
@@ -22,13 +21,90 @@ def load_data():
 
 df, events, metrics = load_data()
 
+# ── CUSTOM CSS THEME ────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+/* Apply modern font */
+html, body, [class*="css"], .stApp {
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+
+/* Style metric cards with sleek borders and left accents */
+div[data-testid="metric-container"] {
+    background-color: #fdfdfd;
+    border: 1px solid #eef1f6;
+    border-left: 6px solid #2A9D8F !important;
+    padding: 18px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(26, 58, 92, 0.04);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(26, 58, 92, 0.08);
+    border-left: 6px solid #1A3A5C !important;
+}
+
+/* Custom styles for metric labels and values */
+div[data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #1A3A5C !important;
+}
+div[data-testid="stMetricLabel"] {
+    font-size: 0.85rem !important;
+    color: #7f8c8d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* Custom style for tab headers */
+div[data-baseweb="tab-list"] {
+    gap: 24px;
+    border-bottom: 2px solid #f1f3f5;
+    padding-bottom: 5px;
+}
+button[data-baseweb="tab"] {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    color: #8e9aa8 !important;
+    border-bottom: 3px solid transparent !important;
+    padding: 10px 16px !important;
+    transition: all 0.25s ease;
+}
+button[data-baseweb="tab"]:hover {
+    color: #1A3A5C !important;
+}
+button[aria-selected="true"] {
+    color: #1A3A5C !important;
+    border-bottom: 3px solid #2A9D8F !important;
+}
+
+/* Styling alert boxes */
+.stAlert {
+    border-radius: 12px !important;
+    border: 1px solid #eef1f6 !important;
+    box-shadow: 0 4px 12px rgba(26, 58, 92, 0.03) !important;
+    background-color: #f8f9fa !important;
+}
+
+/* Rounded inputs and selectors */
+div[data-baseweb="select"] {
+    border-radius: 10px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── HEADER ─────────────────────────────────────────────
 st.markdown("""
-<h1 style='color:#1A3A5C;margin-bottom:0'>📉 RupeeRisk</h1>
-<p style='color:#555;font-size:16px;margin-top:4px'>
-India Macro & Geopolitical Forex Intelligence Platform — 
-INR/USD analysis with war risk as an engineered feature
-</p>
+<div style="background: linear-gradient(135deg, #102a43, #0b1d33); padding: 35px; border-radius: 20px; border: 1px solid #102a43; color: white; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(16, 42, 67, 0.15);">
+    <h1 style="margin: 0; font-size: 3rem; font-weight: 700; background: linear-gradient(to right, #00b4db, #2A9D8F); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">RupeeRisk</h1>
+    <p style="margin: 6px 0 0 0; font-size: 1.15rem; color: #b4c6ef; font-weight: 300; letter-spacing: 0.3px;">India Macro & Geopolitical Forex Intelligence Platform</p>
+    <div style="font-size: 0.85rem; color: #627d98; margin-top: 18px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Advanced Analytics, Econometrics, and Machine Learning Backtesting</div>
+</div>
 """, unsafe_allow_html=True)
 
 st.divider()
@@ -48,7 +124,7 @@ col4.metric("Geopolitical Events Analysed", f"{len(events)}")
 st.divider()
 
 # ── TABS ───────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["📊 Macro Dashboard", "⚔️ Geopolitical Risk", "🔮 Forecasting"])
+tab1, tab2, tab3 = st.tabs(["Macro Dashboard", "Geopolitical Risk", "Forecasting"])
 
 # ─────────────────────────────────────────────────────────
 # TAB 1: MACRO DASHBOARD
@@ -227,7 +303,7 @@ with tab3:
         predictions = preds_data["predictions"]
         cum_returns = preds_data["cum_returns"]
         
-        st.subheader("🏆 Model Performance League Table")
+        st.subheader("Model Performance League Table")
         st.caption("Models ranked by out-of-sample performance over the last 52 weeks.")
         # Renders the nice league table
         st.dataframe(metrics.style.format({
@@ -238,7 +314,7 @@ with tab3:
             "Cumulative Return (%)": "{:+.2f}%"
         }), use_container_width=True)
         
-        st.subheader("📈 Out-of-Sample Predictions (Last 52 Weeks)")
+        st.subheader("Out-of-Sample Predictions (Last 52 Weeks)")
         fig4 = go.Figure()
         fig4.add_trace(go.Scatter(x=dates, y=actual,
             mode="lines+markers", name="Actual USD/INR", line=dict(color="#1A3A5C", width=2.5)))
@@ -259,7 +335,7 @@ with tab3:
                            legend=dict(orientation="h", y=1.15))
         st.plotly_chart(fig4, use_container_width=True)
         
-        st.subheader("💰 Trading Strategy Backtest: Cumulative Returns")
+        st.subheader("Trading Strategy Backtest: Cumulative Returns")
         st.caption("Performance of a simulated trading rule: Long USD/INR if predicted rate goes up, Short if it goes down.")
         
         fig5 = go.Figure()
