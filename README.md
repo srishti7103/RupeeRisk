@@ -1,6 +1,6 @@
 # RupeeRisk: India Macro & Geopolitical Forex Intelligence Platform
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/your-username/your-repo-name/main/app.py)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://rupeerisk.streamlit.app)
 
 RupeeRisk is a international finance and machine learning platform that forecasts the USD/INR exchange rate by engineering geopolitical tension indicators and combining them with macroeconomic factors. 
 
