@@ -1,6 +1,5 @@
 # RupeeRisk: India Macro & Geopolitical Forex Intelligence Platform
-
-<<<<<<< 
+ 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://share.streamlit.io/your-username/your-repo-name/main/app.py)
 =======
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://rupeerisk.streamlit.app)
