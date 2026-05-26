@@ -10,78 +10,13 @@ This platform implements a statistically rigorous pipeline, compares classical e
 
 ## System Architecture & Data Flow
 
-Below is the end-to-end architecture of the platform, showing how daily and monthly feeds are transformed, modeled, and served:
+Below is the high-level architecture of the platform:
 
 ```mermaid
-graph TD
-    %% Data Sources
-    subgraph Data Sources
-        YF["yfinance API: USD/INR, Nifty, VIX, Gold, Crude"]
-        FRED["FRED API: US CPI, US Fed Funds Rate, US 10Y Yield"]
-        RBI["RBI Announcements: India Repo Rate"]
-        GEOP["Geopolitical Events Dataset: Manually Curated"]
-    end
-
-    %% Preprocessing
-    subgraph Preprocessing & Feature Engineering
-        MERGE["Merge to Daily Scale & Forward-Fill Lags"]
-        SPREAD["Calculate Interest Rate Spread: US Fed - RBI Repo"]
-        TENSION["Engineered Geo_Tension Pulse Indicator"]
-        WEEKLY["Resample to Weekly Averages"]
-    end
-
-    %% Statistical Overhaul
-    subgraph Econometric Transformations
-        ADF["Augmented Dickey-Fuller Tests: Confirm I(1) levels"]
-        DIFF["First-Differencing: Transform to I(0) Stationary Returns"]
-        LAG["1-Week Exogenous Feature Lag: Eliminate Look-Ahead Bias"]
-    end
-
-    %% Modeling & Backtest
-    subgraph Rolling 1-Step Validation Loop
-        TRAIN["Train Window: t-1"]
-        TEST["Test Week: t"]
-        
-        SARIMA["SARIMA Univariate Baseline"]
-        ARIMAX["ARIMAX Linear Time-Series"]
-        LASSO["Lasso Regression: L1 Penalty"]
-        GB["Gradient Boosting Regressor"]
-        
-        LEVEL["Reconstruct Levels: prev_level + predicted_change"]
-        BT["Trading Strategy Simulation: Long/Short Sign Signals"]
-    end
-
-    %% Outputs & Dashboard
-    subgraph Output & Frontend
-        CSV["model_metrics.csv"]
-        JSON["predictions.json"]
-        ST["Streamlit Web App: Interactive Visualizations"]
-    end
-
-    %% Connections
-    YF --> MERGE
-    FRED --> MERGE
-    RBI --> MERGE
-    GEOP --> TENSION
-    
-    MERGE --> SPREAD
-    SPREAD --> WEEKLY
-    TENSION --> WEEKLY
-    
-    WEEKLY --> ADF
-    ADF --> DIFF
-    DIFF --> LAG
-    
-    LAG --> TRAIN
-    TRAIN --> SARIMA & ARIMAX & LASSO & GB
-    GB & LASSO & ARIMAX & SARIMA --> TEST
-    TEST --> LEVEL
-    LEVEL --> BT
-    
-    LEVEL --> JSON
-    BT --> CSV
-    
-    CSV & JSON --> ST
+graph LR
+    A["1. Data Collection<br>(yfinance, FRED, RBI, Curated Events)"] --> B["2. Preprocessing & Stationarity<br>(Differencing, 1-Week Lags)"]
+    B --> C["3. Forecasting Models<br>(SARIMA, ARIMAX, Lasso, Boosting)"]
+    C --> D["4. Streamlit Dashboard<br>(Event Study, Trading Backtests)"]
 ```
 
 ---
