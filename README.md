@@ -10,35 +10,42 @@ This platform implements a statistically rigorous pipeline, compares classical e
 
 ## System Architecture & Data Flow
 
-Below is the system architecture of the platform:
+Below is the system architecture and data flow of the platform:
 
 ```mermaid
 graph TD
-    %% Data Inputs
-    subgraph Data Inputs
-        A["Market Data: Exchange Rate, Oil, DXY, VIX"]
-        B["Macro Data: US-India Interest Spread, CPI, Event Logs"]
+    %% Data Sources
+    subgraph Data Sources
+        YF["yfinance: USD/INR, Crude, DXY, Nifty, Gold"]
+        FRED["FRED API & RBI: CPI, yields & repo rates"]
+        GEOP["Geopolitical Events Database (Manually Curated)"]
     end
 
-    %% Quantitative Engine
-    subgraph Quantitative Engine
-        C["Stationarity & Diagnostics: ADF Unit Root Tests"]
-        D["Feature Engineering: First-Differencing & Returns"]
-        E["1-Week Lags to Eliminate Look-Ahead Bias"]
+    %% Preprocessing & Engine
+    subgraph Preprocessing & Stationarity
+        PREP["Weekly Resampling, Interest Spread & Tension Features"]
+        ENG["ADF Diagnostics, First-Differencing & 1-Week Lags"]
     end
 
-    %% Modeling & Backtesting
-    subgraph modeling & Backtesting
-        F["Predictive Models: SARIMA, ARIMAX, Lasso, Gradient Boosting"]
-        G["Trading Simulation: Sharpe Ratio & Backtest Equity Curve"]
+    %% Modeling Loop
+    subgraph Rolling Forecast & Backtest
+        LOOP["Weekly Rolling 1-Step-Ahead Train/Test Split"]
+        MODELS["Predictive Models: SARIMA, ARIMAX, Lasso, GB"]
+        EVAL["Performance Evaluation & Trading Backtest (Sharpe Ratio)"]
     end
 
-    %% Flow
-    A & B --> C
-    C --> D
-    D --> E
-    E --> F
-    F --> G
+    %% Serve
+    subgraph Frontend Dashboard
+        APP["Streamlit Interactive Web Application"]
+    end
+
+    %% Flow Connections
+    YF & FRED & GEOP --> PREP
+    PREP --> ENG
+    ENG --> LOOP
+    LOOP --> MODELS
+    MODELS --> EVAL
+    EVAL --> APP
 ```
 
 ---
