@@ -10,13 +10,35 @@ This platform implements a statistically rigorous pipeline, compares classical e
 
 ## System Architecture & Data Flow
 
-Below is the high-level architecture of the platform:
+Below is the system architecture of the platform:
 
 ```mermaid
-graph LR
-    A["1. Data Collection<br>(yfinance, FRED, RBI, Curated Events)"] --> B["2. Preprocessing & Stationarity<br>(Differencing, 1-Week Lags)"]
-    B --> C["3. Forecasting Models<br>(SARIMA, ARIMAX, Lasso, Boosting)"]
-    C --> D["4. Streamlit Dashboard<br>(Event Study, Trading Backtests)"]
+graph TD
+    %% Data Inputs
+    subgraph Data Inputs
+        A["Market Data: Exchange Rate, Oil, DXY, VIX"]
+        B["Macro Data: US-India Interest Spread, CPI, Event Logs"]
+    end
+
+    %% Quantitative Engine
+    subgraph Quantitative Engine
+        C["Stationarity & Diagnostics: ADF Unit Root Tests"]
+        D["Feature Engineering: First-Differencing & Returns"]
+        E["1-Week Lags to Eliminate Look-Ahead Bias"]
+    end
+
+    %% Modeling & Backtesting
+    subgraph modeling & Backtesting
+        F["Predictive Models: SARIMA, ARIMAX, Lasso, Gradient Boosting"]
+        G["Trading Simulation: Sharpe Ratio & Backtest Equity Curve"]
+    end
+
+    %% Flow
+    A & B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
 ```
 
 ---
