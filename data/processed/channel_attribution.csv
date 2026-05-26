@@ -1,0 +1,15 @@
+Event,Date,Channel,Category,Crude+5d,DXY+5d,INR+5d,Nifty+5d
+Uri Surgical Strikes,29 Sep 2016,Direct FX,India-Pak,1.8,0.61,0.07,2.07
+Pulwama Attack,14 Feb 2019,Direct FX,India-Pak,3.09,-0.47,1.18,-1.32
+Balakot Airstrike,26 Feb 2019,Direct FX,India-Pak,0.54,0.55,-0.39,0.26
+Galwan Valley Clash,15 Jun 2020,Direct FX + Trade,India-China,7.09,0.97,0.58,4.39
+Operation Sindoor,07 May 2025,Direct FX,India-Pak,6.68,2.19,0.73,2.09
+Gulf of Oman Tanker Attacks,12 May 2019,Oil Supply,Strait of Hormuz,1.78,0.69,-0.25,1.14
+Saudi Aramco Drone Attack,14 Sep 2019,Oil Supply,Middle East,5.98,0.01,0.36,-3.35
+Soleimani Killing,03 Jan 2020,Oil Supply + Risk-Off,US-Iran,-5.46,0.48,1.04,-1.65
+Israel-Hamas War,07 Oct 2023,Oil Supply + Risk-Off,Middle East,0.14,0.5,-0.01,0.71
+Houthi Red Sea Attacks,19 Nov 2023,Trade Route + Oil,Strait of Hormuz,-0.46,-0.4,0.27,0.32
+Russia-Ukraine War Begins,24 Feb 2022,Oil + Gas + Risk-Off + DXY,Europe,11.42,0.28,0.87,3.36
+OPEC+ Production Cuts,05 Oct 2022,Oil Supply,Global Energy,3.84,1.86,1.68,-0.19
+China Stock Market Crash,24 Aug 2015,Risk-Off + DXY,Global,18.25,3.0,0.04,2.47
+COVID Global Lockdown,23 Mar 2020,Risk-Off + Oil Collapse,Global,-7.92,-4.02,-1.19,13.8

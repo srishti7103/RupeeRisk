@@ -1,2 +1,152 @@
-# RupeeRisk
-India Macro &amp; Geopolitical Forex Intelligence Platform - INR/USD forecasting with war risk as an engineered feature
+# RupeeRisk: India Macro & Geopolitical Forex Intelligence Platform
+
+RupeeRisk is a quantitative international finance and machine learning platform that forecasts the **USD/INR exchange rate** by engineering geopolitical tension indicators and combining them with macroeconomic factors. 
+
+This platform implements a statistically rigorous pipeline, compares classical econometrics against machine learning regressors, and backtests a simulated trading strategy.
+
+---
+
+## 💻 System Architecture & Data Flow
+
+Below is the end-to-end architecture of the platform, showing how daily and monthly feeds are transformed, modeled, and served:
+
+```mermaid
+graph TD
+    %% Data Sources
+    subgraph Data Sources
+        YF[yfinance API: USD/INR, Nifty, VIX, Gold, Crude]
+        FRED[FRED API: US CPI, US Fed Funds Rate, US 10Y Yield]
+        RBI[RBI Announcements: India Repo Rate]
+        GEOP[Geopolitical Events Dataset: Manually Curated]
+    end
+
+    %% Preprocessing
+    subgraph Preprocessing & Feature Engineering
+        MERGE[Merge to Daily Scale & Forward-Fill Lags]
+        SPREAD[Calculate Interest Rate Spread: US Fed - RBI Repo]
+        TENSION[Engineered Geo_Tension Pulse Indicator]
+        WEEKLY[Resample to Weekly Averages]
+    end
+
+    %% Statistical Overhaul
+    subgraph Econometric Transformations
+        ADF[Augmented Dickey-Fuller Tests: Confirm I(1) levels]
+        DIFF[First-Differencing: Transform to I(0) Stationary Returns]
+        LAG[1-Week Exogenous Feature Lag: Eliminate Look-Ahead Bias]
+    end
+
+    %% Modeling & Backtest
+    subgraph Rolling 1-Step Validation Loop
+        TRAIN[Train Window: t-1]
+        TEST[Test Week: t]
+        
+        SARIMA[SARIMA Univariate Baseline]
+        ARIMAX[ARIMAX Linear Time-Series]
+        LASSO[Lasso Regression: L1 Penalty]
+        GB[Gradient Boosting Regressor]
+        
+        LEVEL[Reconstruct Levels: prev_level + predicted_change]
+        BT[Trading Strategy Simulation: Long/Short Sign Signals]
+    end
+
+    %% Outputs & Dashboard
+    subgraph Output & Frontend
+        CSV[model_metrics.csv]
+        JSON[predictions.json]
+        ST[Streamlit Web App: Interactive Visualizations]
+    end
+
+    %% Connections
+    YF --> MERGE
+    FRED --> MERGE
+    RBI --> MERGE
+    GEOP --> TENSION
+    
+    MERGE --> SPREAD
+    SPREAD --> WEEKLY
+    TENSION --> WEEKLY
+    
+    WEEKLY --> ADF
+    ADF --> DIFF
+    DIFF --> LAG
+    
+    LAG --> TRAIN
+    TRAIN --> SARIMA & ARIMAX & LASSO & GB
+    GB & LASSO & ARIMAX & SARIMA --> TEST
+    TEST --> LEVEL
+    LEVEL --> BT
+    
+    LEVEL --> JSON
+    BT --> CSV
+    
+    CSV & JSON --> ST
+```
+
+---
+
+## 🛠️ The Statistical Overhaul: Avoiding Common Pitfalls
+
+To ensure this model operates at institutional quantitative standards, the pipeline resolves two critical errors common in naive time-series models:
+
+1. **Non-Stationarity & Spurious Regression**: Asset prices and macroeconomic levels drift over time (contain a unit root). Linear regressions fit on raw levels (e.g., USD/INR rate of 83.5 against Crude at 75.0) are mathematically invalid and lead to spurious correlation. We ran **Augmented Dickey-Fuller (ADF) tests** to confirm non-stationarity in levels and stationarity in **first differences** ($\Delta Y_t = Y_t - Y_{t-1}$).
+2. **Look-Ahead Bias**: Contemporaneous forecasting (using next week's oil price to predict next week's rupee) assumes future knowledge. We **lagged all exogenous variables by 1 week** ($X_{t-1}$). To forecast the rupee's change at week $t$, the model only uses macro data known at week $t-1$.
+3. **Rolling Validation**: Models are evaluated over a 52-week test set using a **rolling 1-step-ahead forecast** (re-fitted weekly). Predictions anchor on the previous week's actual level ($y_{t-1}$).
+
+---
+
+## 🏆 Model Performance League Table (Last 52 Weeks)
+
+Ranked out-of-sample performance over the rolling weekly test window:
+
+| Model | MAPE (%) | RMSE | MDA (%) | Sharpe Ratio | Cumulative Return (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| 🥇 **Lasso** | **0.458%** | **0.537** | **73.08%** | **2.68** | **+11.70%** |
+| 🥈 **Gradient Boosting (GB)** | 0.493% | 0.552 | 65.38% | 2.36 | +10.40% |
+| 🥉 **ARIMAX** | 0.491% | 0.567 | 59.62% | 1.20 | +5.32% |
+| **SARIMA** (Baseline) | 0.498% | 0.569 | 55.77% | 0.76 | +3.34% |
+| **Random Forest (RF)** | 0.525% | 0.584 | 53.85% | -0.10 | -0.53% |
+
+### Key Quantitative Takeaways:
+- **Lasso Outperformance**: Macro drivers are highly correlated (multicollinearity). OLS/ARIMAX estimates become unstable. Lasso's **L1 Regularization** drives redundant coefficients to zero, achieving a phenomenal **73.08% Directional Accuracy (MDA)** and a **2.68 Sharpe Ratio**.
+- **The Meese-Rogoff Puzzle (1983)**: The fact that SARIMA (a random walk with drift) is highly competitive out-of-sample validates standard international finance theory—exchange rates are highly efficient and difficult to beat using lagged economic variables.
+- **ARIMAX beats SARIMA**: Enforcing stationarity and lagging features correctly allows ARIMAX to outperform SARIMA (MDA **59.62%** vs **55.77%**), proving macro indicators carry predictive signals when look-ahead bias is removed.
+
+---
+
+## 🚀 Running the Project Locally
+
+### 1. Installation
+Clone the repository and install dependencies inside a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Execute Data & Models
+Run the notebooks in order:
+1. `notebooks/01_data_collection.ipynb` (fetches Yahoo Finance and FRED series)
+2. `notebooks/02_eda_features.ipynb` (feature engineering and ADF tests)
+3. `notebooks/02b_seasonal_analysis.ipynb` (STL seasonal decomposition)
+4. `notebooks/03_event_study.ipynb` (quantifies asset responses to geopolitical shocks)
+5. `notebooks/04_forecasting.ipynb` (runs rolling forecast models and backtests)
+
+*Alternatively, you can run all notebooks using nbconvert:*
+```bash
+jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
+```
+
+### 3. Launch App
+Start the interactive Streamlit dashboard:
+```bash
+streamlit run app.py
+```
+
+---
+
+## 📂 Project Structure
+- `data/`: Contains raw downloaded datasets and processed outputs (correlation matrix, model predictions, backtest returns).
+- `notebooks/`: Modular notebooks containing the research, data collection, EDA, econometrics, and modeling code.
+- `app.py`: The interactive multi-tab Streamlit dashboard.
+- `requirements.txt`: Project package dependencies.
+- `README.md`: Project summary documentation.
