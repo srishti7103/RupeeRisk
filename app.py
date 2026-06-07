@@ -381,21 +381,60 @@ with tab3:
             "Cumulative Return (%)": "{:+.2f}%"
         }), use_container_width=True)
         
-        st.subheader("Out-of-Sample Predictions (200 Weeks)")
-        fig4 = go.Figure()
-        fig4.add_trace(go.Scatter(x=dates, y=actual,
-            mode="lines+markers", name="Actual USD/INR", line=dict(color="#1A3A5C", width=2.5)))
+        st.subheader("Out-of-Sample Forecast Visualization")
         
-        # Plot top models: ARIMA+Lasso Hybrid, Lasso, and ARIMA baseline
-        fig4.add_trace(go.Scatter(x=dates, y=predictions["arima_lasso"],
-            mode="lines", name=f"ARIMA+Lasso Hybrid (MAPE: {metrics.loc['arima_lasso','MAPE (%)']:.3f}%)",
-            line=dict(color="#D62828", width=2.5)))  # Crimson Red
-        fig4.add_trace(go.Scatter(x=dates, y=predictions["lasso"],
-            mode="lines", name=f"Lasso (MAPE: {metrics.loc['lasso','MAPE (%)']:.3f}%)",
-            line=dict(color="#2A9D8F", width=1.5, dash="dash")))
-        fig4.add_trace(go.Scatter(x=dates, y=predictions["arima"],
-            mode="lines", name=f"ARIMA Baseline (MAPE: {metrics.loc['arima','MAPE (%)']:.3f}%)",
-            line=dict(color="#F4A261", width=1.5, dash="dot")))
+        # User controls for zoom window and model selection
+        col_plot1, col_plot2 = st.columns(2)
+        with col_plot1:
+            plot_weeks = st.selectbox(
+                "Select Visualization Time Window",
+                options=[26, 52, 100, 200],
+                format_func=lambda x: f"Last {x} Weeks (Zoomed)" if x < 200 else "Full 200 Weeks",
+                index=1 # Default to last 52 weeks (1 year)
+            )
+        with col_plot2:
+            model_options = {
+                "ARIMA+Lasso Hybrid": "arima_lasso",
+                "Lasso": "lasso",
+                "ARIMA Baseline": "arima"
+            }
+            selected_models = st.multiselect(
+                "Select Models to Display",
+                options=list(model_options.keys()),
+                default=["ARIMA+Lasso Hybrid"]
+            )
+            
+        # Slice predictions and actuals based on the selected weeks
+        slice_dates = dates[-plot_weeks:]
+        slice_actual = actual[-plot_weeks:]
+        
+        fig4 = go.Figure()
+        fig4.add_trace(go.Scatter(
+            x=slice_dates, y=slice_actual,
+            mode="lines+markers" if plot_weeks <= 52 else "lines", 
+            name="Actual USD/INR", 
+            line=dict(color="#3498db", width=2.5) # Sleek electric blue
+        ))
+        
+        # Consistent color mapping for the predictions chart
+        model_colors = {
+            "arima_lasso": "#D62828",  # Crimson Red
+            "lasso": "#2A9D8F",        # Teal Green
+            "arima": "#F4A261"         # Warm Orange
+        }
+        
+        for model_label in selected_models:
+            model_key = model_options[model_label]
+            slice_pred = predictions[model_key][-plot_weeks:]
+            color = model_colors[model_key]
+            dash = "dash" if model_key == "lasso" else ("dot" if model_key == "arima" else None)
+            
+            fig4.add_trace(go.Scatter(
+                x=slice_dates, y=slice_pred,
+                mode="lines", 
+                name=f"{model_label} (MAPE: {metrics.loc[model_key, 'MAPE (%)']:.3f}%)",
+                line=dict(color=color, width=2, dash=dash)
+            ))
             
         fig4.update_layout(height=400, template="plotly_dark",
                            yaxis_title="USD/INR Level", xaxis_title="Date",
