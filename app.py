@@ -54,29 +54,28 @@ html, body, [class*="css"], .stApp {
 
 /* Style metric cards with sleek borders and left accents */
 div[data-testid="metric-container"] {
-    background-color: #fdfdfd;
-    border: 1px solid #eef1f6;
+    background-color: #161B22;
+    border: 1px solid #30363d;
     border-left: 6px solid #2A9D8F !important;
     padding: 18px 24px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(26, 58, 92, 0.04);
+    box-shadow: none;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 div[data-testid="metric-container"]:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(26, 58, 92, 0.08);
-    border-left: 6px solid #1A3A5C !important;
+    border-left: 6px solid #2A9D8F !important;
 }
 
 /* Custom styles for metric labels and values */
 div[data-testid="stMetricValue"] {
     font-size: 2rem !important;
     font-weight: 700 !important;
-    color: #1A3A5C !important;
+    color: #F0F6FC !important;
 }
 div[data-testid="stMetricLabel"] {
     font-size: 0.85rem !important;
-    color: #7f8c8d !important;
+    color: #8b949e !important;
     font-weight: 600 !important;
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -85,31 +84,30 @@ div[data-testid="stMetricLabel"] {
 /* Custom style for tab headers */
 div[data-baseweb="tab-list"] {
     gap: 24px;
-    border-bottom: 2px solid #f1f3f5;
+    border-bottom: 2px solid #30363d;
     padding-bottom: 5px;
 }
 button[data-baseweb="tab"] {
     font-size: 1.15rem !important;
     font-weight: 600 !important;
-    color: #8e9aa8 !important;
+    color: #8b949e !important;
     border-bottom: 3px solid transparent !important;
     padding: 10px 16px !important;
     transition: all 0.25s ease;
 }
 button[data-baseweb="tab"]:hover {
-    color: #1A3A5C !important;
+    color: #F0F6FC !important;
 }
 button[aria-selected="true"] {
-    color: #1A3A5C !important;
+    color: #F0F6FC !important;
     border-bottom: 3px solid #2A9D8F !important;
 }
 
 /* Styling alert boxes */
 .stAlert {
     border-radius: 12px !important;
-    border: 1px solid #eef1f6 !important;
-    box-shadow: 0 4px 12px rgba(26, 58, 92, 0.03) !important;
-    background-color: #f8f9fa !important;
+    border: 1px solid #30363d !important;
+    background-color: #161B22 !important;
 }
 
 /* Rounded inputs and selectors */
@@ -281,13 +279,16 @@ with tab2:
             val_5 = cum_ret.values[days.index(5)]
             impact_data.append({"Asset": label, "+5 Day Impact": f"{val_5:+.2f}%"})
     
-    fig3.add_hline(y=0, line_dash="dash", line_color="black", line_width=0.8)
+    fig3.add_hline(y=0, line_dash="dash", line_color="white", line_width=0.8)
     fig3.add_vline(x=0, line_dash="dot", line_color="gray", line_width=1,
                    annotation_text="Event Day", annotation_position="top right")
     fig3.update_layout(
         title=f"Event Study: {selected_event}",
         xaxis_title="Days from Event", yaxis_title="Cumulative Return (%)",
-        template="plotly_white", height=420,
+        template="plotly_dark", height=420,
+        plot_bgcolor="#0D1117",
+        paper_bgcolor="#0D1117",
+        font=dict(color="#F0F6FC"),
         legend=dict(orientation="h", y=1.1)
     )
     st.plotly_chart(fig3, use_container_width=True)
@@ -337,18 +338,18 @@ with tab3:
         model_display_name = next_week_signal.get("model_type", "ARIMA+GradientBoosting_Hybrid").replace("_", " ").replace("+", " + ")
         
         st.markdown(f"""
-        <div style="background-color: #f8f9fa; border: 1px solid #eef1f6; border-left: 6px solid {sig_color}; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(26,58,92,0.03); margin-bottom: 25px;">
-            <div style="font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px;">{model_display_name} Signal for week ending {next_week_signal["next_week_date"]}</div>
-            <div style="font-size: 1.8rem; font-weight: 700; color: #1A3A5C; margin-bottom: 8px;">
+        <div style="background-color: #161B22; border: 1px solid #30363d; border-left: 6px solid {sig_color}; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+            <div style="font-size: 0.85rem; color: #8b949e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px;">{model_display_name} Signal for week ending {next_week_signal["next_week_date"]}</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #F0F6FC; margin-bottom: 8px;">
                 INR Expected to <span style="color: {sig_color};">{sig_word}</span>
             </div>
-            <div style="font-size: 1.05rem; color: #34495e; font-weight: 400;">
+            <div style="font-size: 1.05rem; color: #c9d1d9; font-weight: 400;">
                 Expected Rate Change: <b>{next_week_signal["predicted_change"]:+.4f}</b> (<b>{next_week_signal["change_paise"]:.2f} paise</b>)
             </div>
-            <div style="font-size: 1.05rem; color: #34495e; font-weight: 400; margin-top: 4px;">
+            <div style="font-size: 1.05rem; color: #c9d1d9; font-weight: 400; margin-top: 4px;">
                 Target Exchange Rate: <b>₹ {next_week_signal["predicted_rate"]:.4f}</b> (current level: ₹ {next_week_signal["current_rate"]:.4f})
             </div>
-            <div style="font-size: 0.75rem; color: #95a5a6; font-style: italic; margin-top: 12px; border-top: 1px solid #eaeded; padding-top: 8px;">
+            <div style="font-size: 0.75rem; color: #8b949e; font-style: italic; margin-top: 12px; border-top: 1px solid #30363d; padding-top: 8px;">
                 * This signal is generated out-of-sample by the {model_display_name} model trained on all historical data up to {next_week_signal["as_of_date"]}.
             </div>
         </div>
@@ -396,8 +397,11 @@ with tab3:
             mode="lines", name=f"ARIMA Baseline (MAPE: {metrics.loc['arima','MAPE (%)']:.3f}%)",
             line=dict(color="#F4A261", width=1.5, dash="dot")))
             
-        fig4.update_layout(height=400, template="plotly_white",
+        fig4.update_layout(height=400, template="plotly_dark",
                            yaxis_title="USD/INR Level", xaxis_title="Date",
+                           plot_bgcolor="#0D1117",
+                           paper_bgcolor="#0D1117",
+                           font=dict(color="#F0F6FC"),
                            legend=dict(orientation="h", y=1.15))
         st.plotly_chart(fig4, use_container_width=True)
         
@@ -429,9 +433,12 @@ with tab3:
                 ))
                 fig_coef.update_layout(
                     height=300,
-                    template="plotly_white",
+                    template="plotly_dark",
                     xaxis_title="Coefficient Impact (paise)",
                     yaxis_title="",
+                    plot_bgcolor="#0D1117",
+                    paper_bgcolor="#0D1117",
+                    font=dict(color="#F0F6FC"),
                     margin=dict(l=150, r=20, t=10, b=20)
                 )
                 st.plotly_chart(fig_coef, use_container_width=True)
@@ -468,9 +475,12 @@ with tab3:
                 name=f"{model_name.upper()} (Sharpe: {metrics.loc[model_name, 'Sharpe Ratio (Rf=0)']:.2f})",
                 line=dict(color=color, width=width) if color else None
             ))
-        fig5.add_hline(y=0, line_dash="dash", line_color="black", line_width=0.8)
-        fig5.update_layout(height=400, template="plotly_white",
+        fig5.add_hline(y=0, line_dash="dash", line_color="white", line_width=0.8)
+        fig5.update_layout(height=400, template="plotly_dark",
                            yaxis_title="Cumulative Return (%)", xaxis_title="Date",
+                           plot_bgcolor="#0D1117",
+                           paper_bgcolor="#0D1117",
+                           font=dict(color="#F0F6FC"),
                            legend=dict(orientation="h", y=1.15))
         st.plotly_chart(fig5, use_container_width=True)
         
