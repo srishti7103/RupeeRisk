@@ -124,12 +124,21 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Execute Data & Models
-To run the full forecasting pipeline and backtest:
+### 2. Execute Data & Models (Dynamic Updates)
+
+The platform is designed to be completely dynamic. If you or another user clones this repository at any time in the future (e.g., in 2 years), you can fetch live market feeds (via Yahoo Finance) and macroeconomic indices (via FRED API) up to that current date, engineer features, and retrain all 9 forecasting models over a rolling 200-week window.
+
+To execute the entire data collection, feature engineering, model training, and signal generation pipeline in one command:
 ```bash
-python run_pipeline.py
-python generate_next_week_signal.py
+python update_all.py
 ```
+
+This script will run:
+1. `collect_data.py`: Scrapes and merges live data up to the current date.
+2. `run_pipeline.py`: Runs a rolling 1-step-ahead backtest on all 9 models (rolling 200-week test window).
+3. `generate_next_week_signal.py`: Computes the out-of-sample forecast and trading signal for the upcoming week.
+
+*Alternatively, you can trigger this live update directly from the Streamlit web dashboard using the **Pipeline Controls** sidebar!*
 
 *To explore the research notebooks locally:*
 - Run the Jupyter notebooks under `notebooks/` in order: 01 (Collection), 02 (EDA & ADF), 02b (STL Seasonality), 03 (Event Study), 04 (Forecasting).

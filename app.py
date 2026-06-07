@@ -117,6 +117,53 @@ div[data-baseweb="select"] {
 </style>
 """, unsafe_allow_html=True)
 
+# ── SIDEBAR CONTROLS ───────────────────────────────────
+st.sidebar.title("Pipeline Controls")
+st.sidebar.markdown(
+    """
+    ### 🔄 Live Update Pipeline
+    This option scrapes the latest historical data from FRED and Yahoo Finance up to today's date, regenerates features, and retrains all 9 forecasting models over the rolling 200-week window.
+    
+    *Note: This process takes around 30-60 seconds to execute.*
+    """
+)
+
+if st.sidebar.button("Run Live Update", type="primary"):
+    import subprocess
+    import sys
+    
+    status_text = st.sidebar.empty()
+    progress_bar = st.sidebar.progress(0)
+    
+    try:
+        python_bin = sys.executable if sys.executable else "python"
+        
+        status_text.text("Scraping live feeds (Yahoo Finance & FRED)...")
+        progress_bar.progress(10)
+        res1 = subprocess.run([python_bin, "collect_data.py"], capture_output=True, text=True)
+        if res1.returncode != 0:
+            raise Exception(res1.stderr)
+            
+        status_text.text("Training 9 models (rolling 200w validation)...")
+        progress_bar.progress(40)
+        res2 = subprocess.run([python_bin, "run_pipeline.py"], capture_output=True, text=True)
+        if res2.returncode != 0:
+            raise Exception(res2.stderr)
+            
+        status_text.text("Generating out-of-sample forecast signal...")
+        progress_bar.progress(80)
+        res3 = subprocess.run([python_bin, "generate_next_week_signal.py"], capture_output=True, text=True)
+        if res3.returncode != 0:
+            raise Exception(res3.stderr)
+            
+        progress_bar.progress(100)
+        status_text.success("✅ Update complete! Reloading page...")
+        st.cache_data.clear()
+        st.rerun()
+    except Exception as e:
+        status_text.error(f"❌ Update failed:\n{str(e)}")
+        progress_bar.empty()
+
 # ── HEADER ─────────────────────────────────────────────
 st.markdown("""
 <div style="background: linear-gradient(135deg, #102a43, #0b1d33); padding: 35px; border-radius: 20px; border: 1px solid #102a43; color: white; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(16, 42, 67, 0.15);">
