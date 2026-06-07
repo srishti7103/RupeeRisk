@@ -12,7 +12,6 @@ st.set_page_config(
 )
 
 # ── LOAD DATA ──────────────────────────────────────────
-@st.cache_data
 def load_data():
     df      = pd.read_csv("data/processed/master_df.csv",        index_col=0, parse_dates=True)
     events  = pd.read_csv("data/raw/geopolitical_events.csv",    parse_dates=["date"])
