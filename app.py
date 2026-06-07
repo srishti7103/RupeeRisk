@@ -32,7 +32,6 @@ def get_live_rate():
         pass
     return None
 
-@st.cache_data
 def get_next_week_signal():
     try:
         with open("data/processed/next_week_signal.json", "r") as f:
