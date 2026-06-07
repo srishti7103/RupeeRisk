@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import Lasso
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from pmdarima import auto_arima
+from sklearn.ensemble import GradientBoostingRegressor
 import json
 
 # Load data
@@ -38,24 +40,46 @@ model_df = pd.concat([
     weekly[["inr_mom_4w", "inr_mom_12w", "is_fiscal_yr_end", "is_qtr_end"]]
 ], axis=1).dropna()
 
-# Fit Lasso on the entire dataset
+# 1. Fit ARIMA on y
 X = model_df[features_list]
 y = model_df["USDINR_diff"]
-lasso = Lasso(alpha=0.001).fit(X, y)
 
-# Construct features for the NEXT week (t_last + 1)
-# The features for the next week are the base features at the last week
+print("Finding optimal ARIMA order on whole dataset...")
+auto_model = auto_arima(
+    y,
+    seasonal=False,
+    stepwise=True,
+    suppress_warnings=True,
+    max_p=5, max_q=5
+)
+order = auto_model.order
+print(f"Optimal ARIMA order: {order}")
+
+model_arima = SARIMAX(
+    y,
+    order=order,
+    seasonal_order=(0,0,0,0),
+    enforce_stationarity=False,
+    enforce_invertibility=False
+).fit(disp=False)
+
+pred_arima_diff = model_arima.forecast(steps=1).iloc[0]
+
+# Compute in-sample residuals of ARIMA
+arima_fitted = model_arima.fittedvalues
+arima_residuals = y - arima_fitted
+
+# 2. Construct features for the NEXT week (t_last + 1)
 last_date = weekly.index[-1]
 next_week_date = last_date + pd.Timedelta(weeks=1)
 
-# Base features at t_last (to be lagged by 1 week relative to next week)
+# Base features at t_last (lagged by 1 week relative to next week)
 next_crude_diff_lag1 = weekly["CRUDE_diff"].iloc[-1]
 next_dxy_diff_lag1 = weekly["DXY_diff"].iloc[-1]
 next_rate_spread_diff_lag1 = weekly["Rate_Spread_diff"].iloc[-1]
 next_geo_tension_lag1 = weekly["Geo_Tension"].iloc[-1]
 
 # Momentum at t_last (known at last_date)
-# 4w momentum ending at last_date: average of USDINR_diff over the last 4 weeks (including last_date)
 next_inr_mom_4w = weekly["USDINR_diff"].iloc[-4:].mean()
 next_inr_mom_12w = weekly["USDINR_diff"].iloc[-12:].mean()
 
@@ -75,15 +99,16 @@ X_next = pd.DataFrame([{
     "is_qtr_end": next_is_qtr_end
 }])
 
-# Predict next week's change
-pred_diff = lasso.predict(X_next)[0]
+# 3. Fit GB on X to predict the residuals
+model_gb_resid = GradientBoostingRegressor(n_estimators=50, random_state=42).fit(X, arima_residuals)
+pred_gb_resid = model_gb_resid.predict(X_next)[0]
+
+# 4. Hybrid prediction
+pred_diff = pred_arima_diff + pred_gb_resid
 current_rate = weekly["USDINR"].iloc[-1]
 pred_rate = current_rate + pred_diff
 
 signal = "STRENGTHEN" if pred_diff < 0 else "WEAKEN"
-# In rupee terms, negative change means rate falls, so INR strengthens. Positive change means rate rises, so INR weakens.
-# Let's verify: predicted change > 0 means rate rises (INR weakens), change < 0 means rate falls (INR strengthens).
-# Change in paise is diff * 100
 change_paise = abs(pred_diff) * 100
 
 output = {
@@ -93,7 +118,8 @@ output = {
     "predicted_change": float(pred_diff),
     "predicted_rate": float(pred_rate),
     "signal": signal,
-    "change_paise": float(change_paise)
+    "change_paise": float(change_paise),
+    "model_type": "ARIMA+GradientBoosting_Hybrid"
 }
 
 print(output)

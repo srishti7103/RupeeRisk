@@ -335,9 +335,11 @@ with tab3:
         sig_color = "#D62828" if next_week_signal["signal"] == "WEAKEN" else "#2A9D8F"
         sig_word = "WEAKEN (USD/INR Up / Rupee Falls)" if next_week_signal["signal"] == "WEAKEN" else "STRENGTHEN (USD/INR Down / Rupee Rises)"
         
+        model_display_name = next_week_signal.get("model_type", "ARIMA+GradientBoosting_Hybrid").replace("_", " ").replace("+", " + ")
+        
         st.markdown(f"""
         <div style="background-color: #f8f9fa; border: 1px solid #eef1f6; border-left: 6px solid {sig_color}; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(26,58,92,0.03); margin-bottom: 25px;">
-            <div style="font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px;">Lasso Model Signal for week ending {next_week_signal["next_week_date"]}</div>
+            <div style="font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px;">{model_display_name} Signal for week ending {next_week_signal["next_week_date"]}</div>
             <div style="font-size: 1.8rem; font-weight: 700; color: #1A3A5C; margin-bottom: 8px;">
                 INR Expected to <span style="color: {sig_color};">{sig_word}</span>
             </div>
@@ -348,7 +350,7 @@ with tab3:
                 Target Exchange Rate: <b>₹ {next_week_signal["predicted_rate"]:.4f}</b> (current level: ₹ {next_week_signal["current_rate"]:.4f})
             </div>
             <div style="font-size: 0.75rem; color: #95a5a6; font-style: italic; margin-top: 12px; border-top: 1px solid #eaeded; padding-top: 8px;">
-                * This signal is generated out-of-sample by the L1-regularized Lasso model trained on all historical data up to {next_week_signal["as_of_date"]}.
+                * This signal is generated out-of-sample by the {model_display_name} model trained on all historical data up to {next_week_signal["as_of_date"]}.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -384,13 +386,13 @@ with tab3:
         fig4.add_trace(go.Scatter(x=dates, y=actual,
             mode="lines+markers", name="Actual USD/INR", line=dict(color="#1A3A5C", width=2.5)))
         
-        # Plot top 3 models: Lasso, ARIMA (replacing SARIMA), and GB
+        # Plot top models: ARIMA+Lasso Hybrid, Lasso, and ARIMA baseline
+        fig4.add_trace(go.Scatter(x=dates, y=predictions["arima_lasso"],
+            mode="lines", name=f"ARIMA+Lasso Hybrid (MAPE: {metrics.loc['arima_lasso','MAPE (%)']:.3f}%)",
+            line=dict(color="#102a43", width=2)))
         fig4.add_trace(go.Scatter(x=dates, y=predictions["lasso"],
             mode="lines", name=f"Lasso (MAPE: {metrics.loc['lasso','MAPE (%)']:.3f}%)",
-            line=dict(color="#2A9D8F", width=2)))
-        fig4.add_trace(go.Scatter(x=dates, y=predictions["gb"],
-            mode="lines", name=f"Gradient Boosting (MAPE: {metrics.loc['gb','MAPE (%)']:.3f}%)",
-            line=dict(color="#D62828", width=2, dash="dash")))
+            line=dict(color="#2A9D8F", width=1.5, dash="dash")))
         fig4.add_trace(go.Scatter(x=dates, y=predictions["arima"],
             mode="lines", name=f"ARIMA Baseline (MAPE: {metrics.loc['arima','MAPE (%)']:.3f}%)",
             line=dict(color="#F4A261", width=1.5, dash="dot")))
@@ -458,10 +460,11 @@ with tab3:
         st.plotly_chart(fig5, use_container_width=True)
         
         st.info("""
-        **Quantitative Takeaways (200-Week Test Window)**:
-        1. **Lasso is the Top Model (Theil's U < 1.0)**: Lasso achieves the lowest RMSE (**0.3988**) and is the only model to beat the Naïve Random Walk baseline (achieving a **Theil's U of 0.9923**). It registers a **59.00% Mean Directional Accuracy (MDA)** and a **1.02 Sharpe Ratio (Rf=0)**, yielding **13.58% Cumulative Return**. Lasso succeeds because L1 regularization handles multicollinearity among macroeconomic drivers and forces irrelevant features (like 12-week momentum) to zero.
-        2. **Risk-adjusted Carry Disclosures**: The standard Sharpe Ratio assumes a 0% risk-free rate. If we adjust for India's **91-day T-Bill rate (~6.5% annualised)**, the carry hurdle turns the Sharpe Ratio negative (Lasso: **-0.94**). This exposes a crucial quantitative truth: systematic weekly trading of USD/INR is subject to a substantial interest rate carry hurdle in a central-bank-defended exchange rate regime.
-        3. **ARIMA beats SARIMA**: By differencing and avoiding artificial seasonal frequencies (replacing SARIMA with non-seasonal ARIMA), the ARIMA(1,1,0) baseline outperforms the older seasonal baseline, achieving **57.00% MDA** and **12.85% return**. This confirms that weekly USD/INR changes are driven by short-term momentum and macro exogenous features rather than a repeating annual weekly cycle.
+        **Quantitative Takeaways (200-Week Test Window with Hybrid Models)**:
+        1. **ARIMA + Lasso Hybrid is the Top Performer**: The **ARIMA+Lasso Hybrid model dominates** the league table, achieving the highest cumulative return of **+18.07%** and a spectacular **Sharpe Ratio (Rf=0) of 1.33**. It achieves a **59.00% Mean Directional Accuracy (MDA)** and successfully beats the Naïve baseline (**Theil's U = 0.9966**). This hybrid model excels because it decomposes the prediction: ARIMA models the short-term linear time-series dynamics, while Lasso captures the macroeconomic exogenous relationship from the ARIMA residuals.
+        2. **Lasso Standalone beats the Random Walk**: Standalone Lasso achieves the lowest overall RMSE (**0.3988**) and the lowest Theil's U (**0.9923**), with a **59.00% MDA** and a **1.02 Sharpe Ratio**, yielding **13.58% Cumulative Return**. Lasso succeeds because L1 regularization handles multicollinearity among macro drivers.
+        3. **Risk-adjusted Carry Disclosures**: The standard Sharpe Ratio assumes a 0% risk-free rate (Information Ratio). If we adjust for India's **91-day T-Bill rate (~6.5% annualised)**, the carry hurdle turns the Sharpe ratios negative (ARIMA+Lasso Hybrid: **-0.65**). This highlights that systematic weekly trading of USD/INR is subject to a high interest rate carry hurdle in a central-bank-defended exchange rate regime.
+        4. **ARIMA beats SARIMA**: The non-seasonal ARIMA(1,1,0) baseline outperforms the older seasonal SARIMA, achieving **57.00% MDA** and **12.85% return**. This confirms that weekly USD/INR changes are driven by short-term momentum rather than repeating annual weekly cycles.
         """)
         
     except Exception as e:

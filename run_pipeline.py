@@ -77,7 +77,8 @@ print(f"Best ARIMA order: {order}")
 
 # 6. Rolling 1-Step-Ahead Forecast Loop
 preds = {
-    "naive": [], "es": [], "arima": [], "arimax": [], "lasso": [], "rf": [], "gb": []
+    "naive": [], "es": [], "arima": [], "arimax": [], "lasso": [], "rf": [], "gb": [],
+    "arima_lasso": [], "arima_gb": []
 }
 
 for i in range(TEST_WEEKS):
@@ -107,6 +108,8 @@ for i in range(TEST_WEEKS):
         preds["es"].append(prev_level)
 
     # 3. ARIMA (non-seasonal, order from auto_model)
+    arima_train_residuals = y_train_diff.copy()
+    pred_arima_diff = 0.0
     try:
         model_arima = SARIMAX(
             y_train_diff,
@@ -117,6 +120,10 @@ for i in range(TEST_WEEKS):
         ).fit(disp=False)
         pred_arima_diff = model_arima.forecast(steps=1).iloc[0]
         preds["arima"].append(prev_level + pred_arima_diff)
+        
+        # In-sample residuals for hybrid models
+        arima_fitted = model_arima.fittedvalues
+        arima_train_residuals = y_train_diff - arima_fitted
     except Exception as e:
         preds["arima"].append(prev_level)
 
@@ -135,20 +142,40 @@ for i in range(TEST_WEEKS):
     except Exception as e:
         preds["arimax"].append(prev_level)
 
-    # 5. Lasso Regression
+    # 5. Lasso Regression (Standalone)
     model_lasso = Lasso(alpha=0.001).fit(X_train_exog, y_train_diff)
     pred_lasso_diff = model_lasso.predict(test_exog_val)[0]
     preds["lasso"].append(prev_level + pred_lasso_diff)
 
-    # 6. Random Forest
+    # 6. Random Forest (Standalone)
     model_rf = RandomForestRegressor(n_estimators=50, random_state=42).fit(X_train_exog, y_train_diff)
     pred_rf_diff = model_rf.predict(test_exog_val)[0]
     preds["rf"].append(prev_level + pred_rf_diff)
 
-    # 7. Gradient Boosting
+    # 7. Gradient Boosting (Standalone)
     model_gb = GradientBoostingRegressor(n_estimators=50, random_state=42).fit(X_train_exog, y_train_diff)
     pred_gb_diff = model_gb.predict(test_exog_val)[0]
     preds["gb"].append(prev_level + pred_gb_diff)
+
+    # 8. ARIMA + Lasso Hybrid
+    try:
+        # We train Lasso on X_train_exog to predict the ARIMA in-sample residuals
+        model_lasso_resid = Lasso(alpha=0.001).fit(X_train_exog, arima_train_residuals)
+        pred_lasso_resid = model_lasso_resid.predict(test_exog_val)[0]
+        pred_arima_lasso_diff = pred_arima_diff + pred_lasso_resid
+        preds["arima_lasso"].append(prev_level + pred_arima_lasso_diff)
+    except Exception as e:
+        preds["arima_lasso"].append(prev_level + pred_arima_diff)
+
+    # 9. ARIMA + Gradient Boosting Hybrid (ARIMA + XGBoost equivalent)
+    try:
+        # We train GB on X_train_exog to predict the ARIMA in-sample residuals
+        model_gb_resid = GradientBoostingRegressor(n_estimators=50, random_state=42).fit(X_train_exog, arima_train_residuals)
+        pred_gb_resid = model_gb_resid.predict(test_exog_val)[0]
+        pred_arima_gb_diff = pred_arima_diff + pred_gb_resid
+        preds["arima_gb"].append(prev_level + pred_arima_gb_diff)
+    except Exception as e:
+        preds["arima_gb"].append(prev_level + pred_arima_diff)
 
 # Save Lasso coefficients from final fit for interpretability
 final_lasso = Lasso(alpha=0.001).fit(model_df[features_list], model_df["USDINR_diff"])
@@ -171,7 +198,6 @@ def directional_accuracy(y_true, y_pred, y_prev):
     true_dir = np.sign(y_true - y_prev)
     pred_dir = np.sign(y_pred - y_prev)
     valid = true_dir != 0
-    # For naive which predicts 0 change, sign is 0. So it will count as false
     return np.mean(true_dir[valid] == pred_dir[valid]) * 100
 
 # Calculate Naive RMSE first for Theil's U
@@ -207,7 +233,6 @@ for model_name, pred_levels in preds.items():
         sharpe_rf0 = 0.0
 
     # Sharpe Ratio adjusted for India 91-day T-bill (~6.5% annual, which is ~0.125% per week)
-    # 6.5% / 52 weeks = 0.00125 per week risk-free rate
     rf_weekly = 0.065 / 52
     strat_returns_excess = strat_returns - rf_weekly
     if np.std(strat_returns_excess) != 0:
@@ -228,8 +253,6 @@ for model_name, pred_levels in preds.items():
 
 # Save metrics to CSV
 results_df = pd.DataFrame(results).T
-# Map columns to match app expectations (or slightly modify to support new columns)
-# Let's save both columns, keeping Sharpe Ratio mapped to Sharpe Ratio (Rf=0) for compatibility
 results_df["Sharpe Ratio"] = results_df["Sharpe Ratio (Rf=0)"]
 results_df.to_csv("data/processed/model_metrics.csv")
 
@@ -243,6 +266,6 @@ predictions_json = {
 with open("data/processed/predictions.json", "w") as f:
     json.dump(predictions_json, f, indent=4)
 
-print("\n=== LEAGUE TABLE (200 WEEKS) ===")
+print("\n=== LEAGUE TABLE (200 WEEKS WITH HYBRIDS) ===")
 print(results_df.to_string())
 print("\nPredictions and metrics saved successfully!")

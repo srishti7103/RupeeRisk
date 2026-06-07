@@ -9,7 +9,7 @@ This platform implements a statistically rigorous pipeline, compares classical e
 ---
 
 ## Repository Description
-**Weekly INR/USD macro intelligence — 5-model rolling backtest, Sharpe ratio, geopolitical risk features, live rate dashboard.**
+**Weekly INR/USD macro intelligence — 9-model rolling backtest (including hybrids), Sharpe ratio, geopolitical risk features, live rate dashboard.**
 
 ---
 
@@ -36,7 +36,7 @@ graph TD
     %% Modeling Loop
     subgraph Rolling Forecast & Backtest
         LOOP["Weekly Rolling 1-Step-Ahead Train/Test Split"]
-        MODELS["Predictive Models: ARIMA, ARIMAX, Lasso, GB, RF"]
+        MODELS["Predictive Models: ARIMA, ARIMAX, Lasso, GB, RF, Hybrids"]
         EVAL["Performance Evaluation & Trading Backtest (Theil's U & Sharpe)"]
     end
 
@@ -95,9 +95,11 @@ Ranked out-of-sample performance over the rolling weekly test window (July 2022 
 
 | Model | MAPE (%) | RMSE | Theil's U | MDA (%) | Sharpe (Rf=0) | Sharpe (Rf=6.5%) | Cumulative Return (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 **Lasso** | **0.329%** | **0.3988** | **0.9923** | **59.00%** | **1.02** | **-0.94** | **+13.58%** |
-| 🥈 **ARIMA** (Baseline) | 0.329% | 0.4030 | 1.0028 | 57.00% | 0.96 | -0.99 | +12.85% |
-| 🥉 **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
+| 🥇 **ARIMA+Lasso Hybrid** | 0.332% | 0.4005 | 0.9966 | **59.00%** | **1.33** | **-0.65** | **+18.07%** |
+| 🥈 **Lasso** | **0.329%** | **0.3988** | **0.9923** | **59.00%** | 1.02 | -0.94 | +13.58% |
+| 🥉 **ARIMA** (Baseline) | 0.329% | 0.4030 | 1.0028 | 57.00% | 0.96 | -0.99 | +12.85% |
+| **ARIMA+GB Hybrid** | 0.367% | 0.4322 | 1.0754 | 53.50% | 0.47 | -1.48 | +5.98% |
+| **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
 | **Gradient Boosting (GB)** | 0.359% | 0.4237 | 1.0542 | 53.50% | 0.36 | -1.58 | +4.58% |
 | **Random Forest (RF)** | 0.388% | 0.4464 | 1.1106 | 54.50% | 0.28 | -1.66 | +3.48% |
 | **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 50.00%* | 0.00 | N/A | 0.00% |
@@ -106,9 +108,9 @@ Ranked out-of-sample performance over the rolling weekly test window (July 2022 
 *\* Note: Naïve Directional Accuracy is 50.00% by definition since it always predicts no change (direction = 0).*
 
 ### Key Quantitative Takeaways:
-- **Lasso Outperformance (Theil's U < 1.0)**: Macro drivers are highly correlated (multicollinearity). Lasso's L1 regularization penalizes coefficients, driving redundant features (like 12-week momentum) to exactly zero. Lasso is the only model to beat the Naïve Random Walk in forecasting accuracy (**Theil's U of 0.9923**), achieving an out-of-sample directional accuracy of **59.00%** (highly statistically significant over 200 weeks).
-- ** Carry Hurdle Disclosure**: While standard Sharpe assumes a risk-free rate of 0, adjusting for India's **91-day T-bill carry cost (~6.5% annualised)** turns all model Sharpe ratios negative (Lasso: **-0.94**). This exposes a vital carry cost carry-trade hurdle that directional FX strategies face in high-yield emerging markets.
-- **ARIMA beats SARIMA**: By differencing and avoiding seasonal overfitting, the non-seasonal ARIMA baseline significantly outperforms the old SARIMA structure, achieving a **57.00% MDA** and **12.85% cumulative return**.
+- **Hybrid Domination**: The **ARIMA+Lasso Hybrid** is the top-performing model on the platform, capturing the linear weekly autocorrelation with ARIMA and correcting residual errors using Lasso. It generates the highest cumulative return (**+18.07%**) and Sharpe ratio (**1.33**).
+- **Lasso Regularization**: Standalone Lasso also excels, achieving the lowest out-of-sample error (**RMSE: 0.3988**, **Theil's U: 0.9923**) and a directional accuracy of **59.00%** by zeroing out collinear indicators.
+- **Carry Hurdle Disclosure**: When accounting for the **91-day T-bill carry cost (~6.5%)**, excess Sharpe ratios turn negative for all models (ARIMA+Lasso: **-0.65**), indicating the steep hurdle directional FX traders face in emerging markets.
 
 ---
 

@@ -111,7 +111,7 @@ Running a seasonal SARIMA model runs the risk of overfitting on noise. Consequen
 
 ## 5. Model Architectures & Validation
 
-Seven models were trained and evaluated:
+Nine models were trained and evaluated:
 
 ```mermaid
 flowchart TD
@@ -131,6 +131,9 @@ flowchart TD
             M4[ARIMAX 1,1,0 exog]
             M5[Lasso L1 Regularization]
             M6[Gradient Boosting Trees]
+            M7[Random Forest]
+            M8[ARIMA+Lasso Hybrid]
+            M9[ARIMA+GB Hybrid]
         end
         
         FORECAST[Forecast diff: delta_y_t]
@@ -141,8 +144,8 @@ flowchart TD
 
     TS --> TRAIN & TEST
     TRAIN --> SPLIT
-    SPLIT --> M1 & M2 & M3 & M4 & M5 & M6
-    M1 & M2 & M3 & M4 & M5 & M6 --> FORECAST
+    SPLIT --> M1 & M2 & M3 & M4 & M5 & M6 & M7 & M8 & M9
+    M1 & M2 & M3 & M4 & M5 & M6 & M7 & M8 & M9 --> FORECAST
     FORECAST --> RECONSTRUCT --> SIGNAL --> RETURN
 ```
 
@@ -156,9 +159,11 @@ The models were evaluated over a **200-week rolling window** (July 2022 to May 2
 
 | Model | MAPE (%) | RMSE | Theil's U | MDA (%) | Sharpe (Rf=0) | Sharpe (Rf=6.5%) | Cumulative Return (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 **Lasso** | **0.329%** | **0.3988** | **0.9923** | **59.00%** | **1.02** | **-0.94** | **+13.58%** |
-| 🥈 **ARIMA** | 0.329% | 0.4030 | 1.0028 | 57.00% | 0.96 | -0.99 | +12.85% |
-| 🥉 **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
+| 🥇 **ARIMA+Lasso Hybrid** | 0.332% | 0.4005 | 0.9966 | **59.00%** | **1.33** | **-0.65** | **+18.07%** |
+| 🥈 **Lasso** | **0.329%** | **0.3988** | **0.9923** | **59.00%** | 1.02 | -0.94 | +13.58% |
+| 🥉 **ARIMA** | 0.329% | 0.4030 | 1.0028 | 57.00% | 0.96 | -0.99 | +12.85% |
+| **ARIMA+GB Hybrid** | 0.367% | 0.4322 | 1.0754 | 53.50% | 0.47 | -1.48 | +5.98% |
+| **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
 | **Gradient Boosting (GB)** | 0.359% | 0.4237 | 1.0542 | 53.50% | 0.36 | -1.58 | +4.58% |
 | **Random Forest (RF)** | 0.388% | 0.4464 | 1.1106 | 54.50% | 0.28 | -1.66 | +3.48% |
 | **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 50.00%* | 0.00 | N/A | 0.00% |
@@ -201,8 +206,17 @@ To assess structural robustness, we split the 200 test weeks into **High-Volatil
 The **Meese-Rogoff Puzzle (1983)** is a famous thesis in international economics showing that structural exchange rate models (using fundamentals like oil, CPI, or rates) fail to outperform a simple **Random Walk** model out-of-sample. 
 In our platform:
 - The **Naïve Random Walk** achieves a competitive **0.331% MAPE** and serves as the baseline benchmark.
-- By transforming the data to first differences (ensuring stationarity), lagging features (eliminating look-ahead bias), and adding regularization, our **Lasso model successfully beats the Naïve Random Walk** (Theil's U = 0.9923 < 1.0).
+- By transforming the data to first differences (ensuring stationarity), lagging features (eliminating look-ahead bias), and adding regularization, our **Lasso model (Theil's U = 0.9923)** and **ARIMA+Lasso Hybrid (Theil's U = 0.9966)** successfully beat the Naïve Random Walk.
 - This proves that macroeconomic and geopolitical fundamentals *do* contain predictive signals for USD/INR, but only when models are correctly specified to eliminate statistical bias.
+
+### D. The Success of ARIMA-ML Hybrid Models (Residual Correction)
+Classic economic forecasting often forces a choice between pure statistical time-series memory (e.g., ARIMA) and structural macroeconomic modeling (e.g., Lasso). The hybrid architecture reconciles these two schools of thought by:
+1. Fitting an **ARIMA(1,1,0)** model to capture linear autocorrelation (momentum).
+2. Saving the in-sample fitting errors (residuals): $e_t = y_t - \hat{y}_{t}^{\text{ARIMA}}$.
+3. Fitting a regularized machine learning model (Lasso or Gradient Boosting) on the lagged exogenous features ($X_{t-1}$) to predict these residuals: $\hat{e}_t = f(X_{t-1})$.
+4. Computing the final hybrid prediction as the sum of both components: $\hat{y}_t = \hat{y}_{t}^{\text{ARIMA}} + \hat{e}_t$.
+
+The **ARIMA+Lasso Hybrid** is the top-performing strategy on the platform, generating a cumulative return of **+18.07%** and a Sharpe ratio of **1.33** over the 200-week test window. This shows that modeling linear market memory first, then using macro variables to correct model errors, produces a more robust trading signal than either model alone.
 
 ---
 
