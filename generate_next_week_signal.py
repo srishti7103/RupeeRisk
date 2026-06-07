@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from pmdarima import auto_arima
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Lasso
 import json
 
 # Load data
@@ -99,12 +99,12 @@ X_next = pd.DataFrame([{
     "is_qtr_end": next_is_qtr_end
 }])
 
-# 3. Fit GB on X to predict the residuals
-model_gb_resid = GradientBoostingRegressor(n_estimators=50, random_state=42).fit(X, arima_residuals)
-pred_gb_resid = model_gb_resid.predict(X_next)[0]
+# 3. Fit Lasso on X to predict the residuals
+model_lasso_resid = Lasso(alpha=0.001).fit(X, arima_residuals)
+pred_lasso_resid = model_lasso_resid.predict(X_next)[0]
 
 # 4. Hybrid prediction
-pred_diff = pred_arima_diff + pred_gb_resid
+pred_diff = pred_arima_diff + pred_lasso_resid
 current_rate = weekly["USDINR"].iloc[-1]
 pred_rate = current_rate + pred_diff
 
@@ -119,7 +119,7 @@ output = {
     "predicted_rate": float(pred_rate),
     "signal": signal,
     "change_paise": float(change_paise),
-    "model_type": "ARIMA+GradientBoosting_Hybrid"
+    "model_type": "ARIMA+Lasso_Hybrid"
 }
 
 print(output)

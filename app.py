@@ -382,7 +382,7 @@ with tab3:
         sig_color = "#D62828" if next_week_signal["signal"] == "WEAKEN" else "#2A9D8F"
         sig_word = "WEAKEN (USD/INR Up / Rupee Falls)" if next_week_signal["signal"] == "WEAKEN" else "STRENGTHEN (USD/INR Down / Rupee Rises)"
         
-        model_display_name = next_week_signal.get("model_type", "ARIMA+GradientBoosting_Hybrid").replace("_", " ").replace("+", " + ")
+        model_display_name = next_week_signal.get("model_type", "ARIMA+Lasso_Hybrid").replace("_", " ").replace("+", " + ")
         
         st.markdown(f"""
         <div style="background-color: #161B22; border: 1px solid #30363d; border-left: 6px solid {sig_color}; padding: 20px; border-radius: 12px; margin-bottom: 25px;">

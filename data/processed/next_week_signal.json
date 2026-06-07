@@ -2,9 +2,9 @@
     "as_of_date": "2026-06-07",
     "next_week_date": "2026-06-14",
     "current_rate": 95.55443878173828,
-    "predicted_change": 0.05168391073620833,
-    "predicted_rate": 95.60612269247449,
+    "predicted_change": 0.025287224584536517,
+    "predicted_rate": 95.57972600632282,
     "signal": "WEAKEN",
-    "change_paise": 5.168391073620833,
-    "model_type": "ARIMA+GradientBoosting_Hybrid"
+    "change_paise": 2.5287224584536516,
+    "model_type": "ARIMA+Lasso_Hybrid"
 }
