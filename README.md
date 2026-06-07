@@ -1,11 +1,15 @@
 # RupeeRisk: India Macro & Geopolitical Forex Intelligence Platform
- 
+
 [![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://rupeerisk.streamlit.app)
 
-
-RupeeRisk is a international finance and machine learning platform that forecasts the USD/INR exchange rate by engineering geopolitical tension indicators and combining them with macroeconomic factors. 
+RupeeRisk is an international finance and machine learning platform that forecasts the USD/INR exchange rate by engineering geopolitical tension indicators and combining them with macroeconomic factors. 
 
 This platform implements a statistically rigorous pipeline, compares classical econometrics against machine learning regressors, and backtests a simulated trading strategy.
+
+---
+
+## Repository Description
+**Weekly INR/USD macro intelligence — 5-model rolling backtest, Sharpe ratio, geopolitical risk features, live rate dashboard.**
 
 ---
 
@@ -26,13 +30,14 @@ graph TD
     subgraph Preprocessing & Stationarity
         PREP["Weekly Resampling, Interest Spread & Tension Features"]
         ENG["ADF Diagnostics, First-Differencing & 1-Week Lags"]
+        FEAT["Momentum (4w/12w) & Fiscal Calendar Dummies"]
     end
 
     %% Modeling Loop
     subgraph Rolling Forecast & Backtest
         LOOP["Weekly Rolling 1-Step-Ahead Train/Test Split"]
-        MODELS["Predictive Models: SARIMA, ARIMAX, Lasso, GB"]
-        EVAL["Performance Evaluation & Trading Backtest (Sharpe Ratio)"]
+        MODELS["Predictive Models: ARIMA, ARIMAX, Lasso, GB, RF"]
+        EVAL["Performance Evaluation & Trading Backtest (Theil's U & Sharpe)"]
     end
 
     %% Serve
@@ -43,7 +48,8 @@ graph TD
     %% Flow Connections
     YF & FRED & GEOP --> PREP
     PREP --> ENG
-    ENG --> LOOP
+    ENG --> FEAT
+    FEAT --> LOOP
     LOOP --> MODELS
     MODELS --> EVAL
     EVAL --> APP
@@ -51,32 +57,58 @@ graph TD
 
 ---
 
-## The Statistical Overhaul: Avoiding Common Pitfalls
+## Econometric Rigor & Avoiding Pitfalls
 
-To ensure this model operates at institutional quantitative standards, the pipeline resolves two critical errors common in naive time-series models:
+To ensure this model operates at institutional quantitative standards, the pipeline resolves three critical errors common in naive time-series models:
 
-1. **Non-Stationarity & Spurious Regression**: Asset prices and macroeconomic levels drift over time (contain a unit root). Linear regressions fit on raw levels (e.g., USD/INR rate of 83.5 against Crude at 75.0) are mathematically invalid and lead to spurious correlation. We ran ADF tests to confirm non-stationarity in levels and stationarity in first differences.
-2. **Look-Ahead Bias**: Contemporaneous forecasting (using next week's oil price to predict next week's rupee) assumes future knowledge. We lagged all exogenous variables by 1 week. To forecast the rupee's change at week t, the model only uses macro data known at week t-1.
-3. **Rolling Validation**: Models are evaluated over a 52-week test set using a rolling 1-step-ahead forecast (re-fitted weekly). Predictions anchor on the previous week's actual level.
+1. **Non-Stationarity & Spurious Regression**: Asset levels drift over time (contain a unit root). Regressing non-stationary price levels leads to spurious regressions and invalid t-statistics. We run Augmented Dickey-Fuller (ADF) tests to verify stationarity and differenced all continuous indicators.
+2. **Look-Ahead Bias**: Contemporaneous forecasting (using next week's oil price to predict next week's rupee) assumes future knowledge. We lag all exogenous variables by 1 week ($X_{t-1}$).
+3. **No Seasonal Overfitting**: Our seasonal audit (inspecting ACF/PACF of differenced series) showed that weekly USD/INR changes contain no statistically significant seasonal autocorrelation at lags 13, 26, or 52 (quarterly, semi-annual, or annual weekly cycles). To prevent overfitting on noise, we replaced the seasonal SARIMA with a non-seasonal **ARIMA(1,1,0)** model.
 
 ---
 
-## Model Performance League Table (Last 52 Weeks)
+## Stationarity Verification (ADF Unit Root Tests)
 
-Ranked out-of-sample performance over the rolling weekly test window:
+Below are the empirical test statistics and p-values computed on the weekly dataset (2015–2026):
 
-| Model | MAPE (%) | RMSE | MDA (%) | Sharpe Ratio | Cumulative Return (%) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Lasso** | **0.458%** | **0.537** | **73.08%** | **2.68** | **+11.70%** |
-| **Gradient Boosting (GB)** | 0.493% | 0.552 | 65.38% | 2.36 | +10.40% |
-| **ARIMAX** | 0.491% | 0.567 | 59.62% | 1.20 | +5.32% |
-| **SARIMA** (Baseline) | 0.498% | 0.569 | 55.77% | 0.76 | +3.34% |
-| **Random Forest (RF)** | 0.525% | 0.584 | 53.85% | -0.10 | -0.53% |
+| Variable | Level ADF Stat | Level p-value | Difference ADF Stat | Difference p-value | Integration Order | Decision |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **USD/INR** | 1.0031 | 0.9943 | -7.6369 | 0.0000 | $I(1)$ | First-Differenced |
+| **Crude Oil (WTI)** | -2.1408 | 0.2284 | -8.3451 | 0.0000 | $I(1)$ | First-Differenced |
+| **Dollar Index (DXY)** | -2.5382 | 0.1065 | -9.5672 | 0.0000 | $I(1)$ | First-Differenced |
+| **US-India Rate Spread** | -1.9295 | 0.3183 | -3.8106 | 0.0028 | $I(1)$ | First-Differenced |
+
+---
+
+## Data Granularity Decision
+
+The platform utilizes **weekly averages** rather than daily or monthly data, based on the following quantitative trade-offs:
+- **Why not Daily?** Daily exchange rate series exhibit the wandering movement of a driftless random walk (Mills §1.6) and are heavily dominated by microstructural noise, central bank intervention clustering, and transaction time-zone mismatches.
+- **Why not Monthly?** Monthly resampling smooths out noise but drastically reduces the sample size (only ~130 data points), rendering a rolling out-of-sample machine learning split statistically underpowered.
+- **The Weekly Sweet Spot**: Resampling to weekly averages (providing ~590 observations) filters out high-frequency daily noise while preserving a large enough dataset to split into a rolling 200-week out-of-sample backtest.
+
+---
+
+## Model Performance League Table (200-Week Test Window)
+
+Ranked out-of-sample performance over the rolling weekly test window (July 2022 to May 2026):
+
+| Model | MAPE (%) | RMSE | Theil's U | MDA (%) | Sharpe (Rf=0) | Sharpe (Rf=6.5%) | Cumulative Return (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 🥇 **Lasso** | **0.329%** | **0.3988** | **0.9923** | **59.00%** | **1.02** | **-0.94** | **+13.58%** |
+| 🥈 **ARIMA** (Baseline) | 0.329% | 0.4030 | 1.0028 | 57.00% | 0.96 | -0.99 | +12.85% |
+| 🥉 **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
+| **Gradient Boosting (GB)** | 0.359% | 0.4237 | 1.0542 | 53.50% | 0.36 | -1.58 | +4.58% |
+| **Random Forest (RF)** | 0.388% | 0.4464 | 1.1106 | 54.50% | 0.28 | -1.66 | +3.48% |
+| **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 50.00%* | 0.00 | N/A | 0.00% |
+| **Simple Exp Smoothing (SES)** | 0.331% | 0.4019 | 1.0000 | 43.00% | -0.96 | -2.92 | -11.77% |
+
+*\* Note: Naïve Directional Accuracy is 50.00% by definition since it always predicts no change (direction = 0).*
 
 ### Key Quantitative Takeaways:
-- **Lasso Outperformance**: Macro drivers are highly correlated (multicollinearity). OLS/ARIMAX estimates become unstable. Lasso's L1 Regularization drives redundant coefficients to zero, achieving a phenomenal 73.08% Directional Accuracy (MDA) and a 2.68 Sharpe Ratio.
-- **The Meese-Rogoff Puzzle (1983)**: The fact that SARIMA (a random walk with drift) is highly competitive out-of-sample validates standard international finance theory—exchange rates are highly efficient and difficult to beat using lagged economic variables.
-- **ARIMAX beats SARIMA**: Enforcing stationarity and lagging features correctly allows ARIMAX to outperform SARIMA (MDA 59.62% vs 55.77%), proving macro indicators carry predictive signals when look-ahead bias is removed.
+- **Lasso Outperformance (Theil's U < 1.0)**: Macro drivers are highly correlated (multicollinearity). Lasso's L1 regularization penalizes coefficients, driving redundant features (like 12-week momentum) to exactly zero. Lasso is the only model to beat the Naïve Random Walk in forecasting accuracy (**Theil's U of 0.9923**), achieving an out-of-sample directional accuracy of **59.00%** (highly statistically significant over 200 weeks).
+- ** Carry Hurdle Disclosure**: While standard Sharpe assumes a risk-free rate of 0, adjusting for India's **91-day T-bill carry cost (~6.5% annualised)** turns all model Sharpe ratios negative (Lasso: **-0.94**). This exposes a vital carry cost carry-trade hurdle that directional FX strategies face in high-yield emerging markets.
+- **ARIMA beats SARIMA**: By differencing and avoiding seasonal overfitting, the non-seasonal ARIMA baseline significantly outperforms the old SARIMA structure, achieving a **57.00% MDA** and **12.85% cumulative return**.
 
 ---
 
@@ -91,17 +123,14 @@ pip install -r requirements.txt
 ```
 
 ### 2. Execute Data & Models
-Run the notebooks in order:
-1. `notebooks/01_data_collection.ipynb` (fetches Yahoo Finance and FRED series)
-2. `notebooks/02_eda_features.ipynb` (feature engineering and ADF tests)
-3. `notebooks/02b_seasonal_analysis.ipynb` (STL seasonal decomposition)
-4. `notebooks/03_event_study.ipynb` (quantifies asset responses to geopolitical shocks)
-5. `notebooks/04_forecasting.ipynb` (runs rolling forecast models and backtests)
-
-*Alternatively, you can run all notebooks using nbconvert:*
+To run the full forecasting pipeline and backtest:
 ```bash
-jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
+python run_pipeline.py
+python generate_next_week_signal.py
 ```
+
+*To explore the research notebooks locally:*
+- Run the Jupyter notebooks under `notebooks/` in order: 01 (Collection), 02 (EDA & ADF), 02b (STL Seasonality), 03 (Event Study), 04 (Forecasting).
 
 ### 3. Launch App
 Start the interactive Streamlit dashboard:
@@ -112,8 +141,11 @@ streamlit run app.py
 ---
 
 ## Project Structure
-- `data/`: Contains raw downloaded datasets and processed outputs (correlation matrix, model predictions, backtest returns).
+- `data/`: Contains raw downloaded datasets and processed outputs (model metrics, predictions, Lasso coefficients, next-week signal).
 - `notebooks/`: Modular notebooks containing the research, data collection, EDA, econometrics, and modeling code.
 - `app.py`: The interactive multi-tab Streamlit dashboard.
+- `run_pipeline.py`: The full out-of-sample backtesting pipeline.
+- `generate_next_week_signal.py`: Generates the out-of-sample prediction for the upcoming week.
 - `requirements.txt`: Project package dependencies.
 - `README.md`: Project summary documentation.
+- `Report.md`: In-depth quantitative research paper.

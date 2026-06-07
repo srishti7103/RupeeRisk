@@ -1,0 +1,9 @@
+Feature,Coefficient
+CRUDE_diff_lag1,0.008045651450251703
+DXY_diff_lag1,0.05118759331806811
+Rate_Spread_diff_lag1,-0.39921534471487996
+Geo_Tension_lag1,-0.06106174133705803
+inr_mom_4w,0.086712438937419
+inr_mom_12w,0.0
+is_fiscal_yr_end,0.01695547009226677
+is_qtr_end,-0.04485977641384825

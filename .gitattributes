@@ -1,0 +1,4 @@
+*.html linguist-generated=true
+*.html -linguist-detectable
+data/processed/*.html linguist-generated=true
+data/processed/*.html -linguist-detectable

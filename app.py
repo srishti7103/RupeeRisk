@@ -21,6 +21,28 @@ def load_data():
 
 df, events, metrics = load_data()
 
+@st.cache_data(ttl=3600)
+def get_live_rate():
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker("INR=X")
+        live_df = ticker.history(period="2d")
+        if not live_df.empty:
+            return live_df["Close"].iloc[-1]
+    except Exception as e:
+        pass
+    return None
+
+@st.cache_data
+def get_next_week_signal():
+    try:
+        with open("data/processed/next_week_signal.json", "r") as f:
+            return json.load(f)
+    except Exception as e:
+        return None
+
+next_week_signal = get_next_week_signal()
+
 # ── CUSTOM CSS THEME ────────────────────────────────────
 st.markdown("""
 <style>
@@ -115,11 +137,24 @@ current_inr = df["USDINR"].dropna().iloc[-1]
 inr_ytd_start = df["USDINR"].dropna()["2026-01-01":].iloc[0]
 ytd_change = ((current_inr - inr_ytd_start) / inr_ytd_start) * 100
 
-col1.metric("Current USD/INR", f"₹ {current_inr:.2f}")
-col2.metric("YTD Change", f"{ytd_change:+.2f}%", 
-            delta=f"{ytd_change:+.2f}%", delta_color="inverse")
-col3.metric("Best Model (Lasso) MAPE", f"{metrics.loc['lasso','MAPE (%)']:.2f}%")
+# Live rate fetch
+live_rate = get_live_rate()
+if live_rate is not None:
+    col1.metric("Current USD/INR (Live)", f"₹ {live_rate:.4f}")
+    live_ytd_change = ((live_rate - inr_ytd_start) / inr_ytd_start) * 100
+    col2.metric("YTD Change", f"{live_ytd_change:+.2f}%", 
+                delta=f"{live_ytd_change:+.2f}%", delta_color="inverse")
+else:
+    col1.metric("Current USD/INR (Stale)", f"₹ {current_inr:.4f}")
+    col2.metric("YTD Change", f"{ytd_change:+.2f}%", 
+                delta=f"{ytd_change:+.2f}%", delta_color="inverse")
+
+col3.metric("Best Model (Lasso) MAPE", f"{metrics.loc['lasso','MAPE (%)']:.3f}%")
 col4.metric("Geopolitical Events Analysed", f"{len(events)}")
+
+# Data timestamp notice
+csv_date = df.index[-1].strftime('%d %b %Y')
+st.caption(f"ℹ️ **System Notice**: Predictive models are trained on historical data up to **{csv_date}**. The live rate card fetches dynamically from Yahoo Finance and refreshes hourly.")
 
 st.divider()
 
@@ -291,8 +326,32 @@ with tab3:
     - **Data Frequency**: Shifted to **Weekly averages** to provide 590+ observations, enabling robust machine learning training.
     - **Stationarity & Spurious Regression**: Continuous variables are first-differenced (changes/returns) to eliminate spurious correlation risks.
     - **No Look-Ahead Bias**: Exogenous features (Crude, DXY, spreads) are **lagged by 1 week** ($X_{t-1}$).
-    - **Validation**: Evaluated using a **Rolling 1-Step-Ahead Validation** loop (52-week test set), re-estimating models weekly and anchoring on the previous week's level ($y_{t-1}$).
+    - **Validation**: Evaluated using a **Rolling 1-Step-Ahead Validation** loop (**200-week test set** covering 2022–2026), re-estimating models weekly and anchoring on the previous week's level ($y_{t-1}$).
     """)
+
+    # Next Week Signal Box (Phase 3 addition)
+    if next_week_signal is not None:
+        st.markdown("### 🎯 Out-of-Sample Forex Signal (Upcoming Week)")
+        sig_color = "#D62828" if next_week_signal["signal"] == "WEAKEN" else "#2A9D8F"
+        sig_word = "WEAKEN (USD/INR Up / Rupee Falls)" if next_week_signal["signal"] == "WEAKEN" else "STRENGTHEN (USD/INR Down / Rupee Rises)"
+        
+        st.markdown(f"""
+        <div style="background-color: #f8f9fa; border: 1px solid #eef1f6; border-left: 6px solid {sig_color}; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(26,58,92,0.03); margin-bottom: 25px;">
+            <div style="font-size: 0.85rem; color: #7f8c8d; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px;">Lasso Model Signal for week ending {next_week_signal["next_week_date"]}</div>
+            <div style="font-size: 1.8rem; font-weight: 700; color: #1A3A5C; margin-bottom: 8px;">
+                INR Expected to <span style="color: {sig_color};">{sig_word}</span>
+            </div>
+            <div style="font-size: 1.05rem; color: #34495e; font-weight: 400;">
+                Expected Rate Change: <b>{next_week_signal["predicted_change"]:+.4f}</b> (<b>{next_week_signal["change_paise"]:.2f} paise</b>)
+            </div>
+            <div style="font-size: 1.05rem; color: #34495e; font-weight: 400; margin-top: 4px;">
+                Target Exchange Rate: <b>₹ {next_week_signal["predicted_rate"]:.4f}</b> (current level: ₹ {next_week_signal["current_rate"]:.4f})
+            </div>
+            <div style="font-size: 0.75rem; color: #95a5a6; font-style: italic; margin-top: 12px; border-top: 1px solid #eaeded; padding-top: 8px;">
+                * This signal is generated out-of-sample by the L1-regularized Lasso model trained on all historical data up to {next_week_signal["as_of_date"]}.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     try:
         with open("data/processed/predictions.json", "r") as f:
@@ -304,30 +363,36 @@ with tab3:
         cum_returns = preds_data["cum_returns"]
         
         st.subheader("Model Performance League Table")
-        st.caption("Models ranked by out-of-sample performance over the last 52 weeks.")
-        # Renders the nice league table
-        st.dataframe(metrics.style.format({
+        st.caption("Models ranked by out-of-sample performance over the 200-week test window. Naïve Random Walk and Exponential Smoothing included as baselines.")
+        
+        # Select and format columns for the dashboard
+        display_metrics = metrics[["MAPE (%)", "RMSE", "Theil's U", "MDA (%)", "Sharpe Ratio (Rf=0)", "Sharpe Ratio (Rf=6.5%)", "Cumulative Return (%)"]]
+        display_metrics.index = [idx.upper() for idx in display_metrics.index]
+
+        st.dataframe(display_metrics.style.format({
             "MAPE (%)": "{:.3f}%",
             "RMSE": "{:.4f}",
+            "Theil's U": "{:.4f}",
             "MDA (%)": "{:.2f}%",
-            "Sharpe Ratio": "{:.2f}",
+            "Sharpe Ratio (Rf=0)": "{:.2f}",
+            "Sharpe Ratio (Rf=6.5%)": "{:.2f}",
             "Cumulative Return (%)": "{:+.2f}%"
         }), use_container_width=True)
         
-        st.subheader("Out-of-Sample Predictions (Last 52 Weeks)")
+        st.subheader("Out-of-Sample Predictions (200 Weeks)")
         fig4 = go.Figure()
         fig4.add_trace(go.Scatter(x=dates, y=actual,
             mode="lines+markers", name="Actual USD/INR", line=dict(color="#1A3A5C", width=2.5)))
         
-        # Plot top 3 models: Lasso, Gradient Boosting (GB), and ARIMAX baseline
+        # Plot top 3 models: Lasso, ARIMA (replacing SARIMA), and GB
         fig4.add_trace(go.Scatter(x=dates, y=predictions["lasso"],
-            mode="lines", name=f"Lasso (MAPE: {metrics.loc['lasso','MAPE (%)']:.2f}%)",
+            mode="lines", name=f"Lasso (MAPE: {metrics.loc['lasso','MAPE (%)']:.3f}%)",
             line=dict(color="#2A9D8F", width=2)))
         fig4.add_trace(go.Scatter(x=dates, y=predictions["gb"],
-            mode="lines", name=f"Gradient Boosting (MAPE: {metrics.loc['gb','MAPE (%)']:.2f}%)",
+            mode="lines", name=f"Gradient Boosting (MAPE: {metrics.loc['gb','MAPE (%)']:.3f}%)",
             line=dict(color="#D62828", width=2, dash="dash")))
-        fig4.add_trace(go.Scatter(x=dates, y=predictions["sarima"],
-            mode="lines", name=f"SARIMA Baseline (MAPE: {metrics.loc['sarima','MAPE (%)']:.2f}%)",
+        fig4.add_trace(go.Scatter(x=dates, y=predictions["arima"],
+            mode="lines", name=f"ARIMA Baseline (MAPE: {metrics.loc['arima','MAPE (%)']:.3f}%)",
             line=dict(color="#F4A261", width=1.5, dash="dot")))
             
         fig4.update_layout(height=400, template="plotly_white",
@@ -335,16 +400,56 @@ with tab3:
                            legend=dict(orientation="h", y=1.15))
         st.plotly_chart(fig4, use_container_width=True)
         
+        # Lasso Feature Importance (Lasso Coefficient Chart)
+        st.subheader("Lasso Model Feature Intelligence")
+        st.markdown("Features selected by L1 regularization (Lasso) and their corresponding coefficients:")
+        try:
+            coef_df = pd.read_csv("data/processed/lasso_coefficients.csv")
+            coef_df = coef_df[coef_df["Coefficient"] != 0].sort_values(by="Coefficient", key=abs, ascending=True)
+            if not coef_df.empty:
+                # Nicer names for the feature importance chart
+                name_mapping = {
+                    "CRUDE_diff_lag1": "Crude Oil (1w diff lag)",
+                    "DXY_diff_lag1": "US Dollar Index (1w diff lag)",
+                    "Rate_Spread_diff_lag1": "US-India Interest Spread (1w diff lag)",
+                    "Geo_Tension_lag1": "Geopolitical Tension (1w lag)",
+                    "inr_mom_4w": "4-Week INR Momentum",
+                    "inr_mom_12w": "12-Week INR Momentum",
+                    "is_fiscal_yr_end": "Fiscal Year-End Dummy (March)",
+                    "is_qtr_end": "Quarter-End Dummy"
+                }
+                coef_df["Feature Name"] = coef_df["Feature"].map(name_mapping).fillna(coef_df["Feature"])
+                
+                fig_coef = go.Figure(go.Bar(
+                    x=coef_df["Coefficient"],
+                    y=coef_df["Feature Name"],
+                    orientation='h',
+                    marker_color='#2A9D8F'
+                ))
+                fig_coef.update_layout(
+                    height=300,
+                    template="plotly_white",
+                    xaxis_title="Coefficient Impact (paise)",
+                    yaxis_title="",
+                    margin=dict(l=150, r=20, t=10, b=20)
+                )
+                st.plotly_chart(fig_coef, use_container_width=True)
+            else:
+                st.info("Lasso regularized all coefficients to zero.")
+        except Exception as e:
+            st.warning(f"Could not load Lasso coefficients: {e}")
+
         st.subheader("Trading Strategy Backtest: Cumulative Returns")
         st.caption("Performance of a simulated trading rule: Long USD/INR if predicted rate goes up, Short if it goes down.")
         
         fig5 = go.Figure()
+        # Render cumulative returns for all models
         for model_name, rets in cum_returns.items():
             fig5.add_trace(go.Scatter(
                 x=dates,
                 y=[v * 100 for v in rets],
                 mode="lines",
-                name=f"{model_name.upper()} (Sharpe: {metrics.loc[model_name, 'Sharpe Ratio']:.2f})"
+                name=f"{model_name.upper()} (Sharpe: {metrics.loc[model_name, 'Sharpe Ratio (Rf=0)']:.2f})"
             ))
         fig5.add_hline(y=0, line_dash="dash", line_color="black", line_width=0.8)
         fig5.update_layout(height=400, template="plotly_white",
@@ -353,10 +458,10 @@ with tab3:
         st.plotly_chart(fig5, use_container_width=True)
         
         st.info("""
-        **Quantitative Takeaways**:
-        1. **Lasso is the Top Model**: Lasso achieves the lowest **MAPE (0.46%)** and a spectacular **Mean Directional Accuracy (73.08%)**, yielding a **Sharpe Ratio of 2.68** and **11.70% Cumulative Return**. Lasso wins because L1 regularization prevents overfitting and resolves multicollinearity among correlated macro drivers.
-        2. **Non-Linear Boosting**: **Gradient Boosting (Sharpe: 2.36, Return: 10.40%)** performs exceptionally well, capturing non-linear relationships during market shocks, while **Random Forest** overfits and struggles on test data.
-        3. **ARIMAX beats SARIMA**: By differencing and lagging variables correctly, ARIMAX beats SARIMA (MDA **59.62%** vs **55.77%**), proving that macroeconomic indicators (oil, rates, DXY) do carry predictive signals when look-ahead bias is eliminated!
+        **Quantitative Takeaways (200-Week Test Window)**:
+        1. **Lasso is the Top Model (Theil's U < 1.0)**: Lasso achieves the lowest RMSE (**0.3988**) and is the only model to beat the Naïve Random Walk baseline (achieving a **Theil's U of 0.9923**). It registers a **59.00% Mean Directional Accuracy (MDA)** and a **1.02 Sharpe Ratio (Rf=0)**, yielding **13.58% Cumulative Return**. Lasso succeeds because L1 regularization handles multicollinearity among macroeconomic drivers and forces irrelevant features (like 12-week momentum) to zero.
+        2. **Risk-adjusted Carry Disclosures**: The standard Sharpe Ratio assumes a 0% risk-free rate. If we adjust for India's **91-day T-Bill rate (~6.5% annualised)**, the carry hurdle turns the Sharpe Ratio negative (Lasso: **-0.94**). This exposes a crucial quantitative truth: systematic weekly trading of USD/INR is subject to a substantial interest rate carry hurdle in a central-bank-defended exchange rate regime.
+        3. **ARIMA beats SARIMA**: By differencing and avoiding artificial seasonal frequencies (replacing SARIMA with non-seasonal ARIMA), the ARIMA(1,1,0) baseline outperforms the older seasonal baseline, achieving **57.00% MDA** and **12.85% return**. This confirms that weekly USD/INR changes are driven by short-term momentum and macro exogenous features rather than a repeating annual weekly cycle.
         """)
         
     except Exception as e:
