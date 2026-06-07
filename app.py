@@ -388,7 +388,7 @@ with tab3:
         # Plot top models: ARIMA+Lasso Hybrid, Lasso, and ARIMA baseline
         fig4.add_trace(go.Scatter(x=dates, y=predictions["arima_lasso"],
             mode="lines", name=f"ARIMA+Lasso Hybrid (MAPE: {metrics.loc['arima_lasso','MAPE (%)']:.3f}%)",
-            line=dict(color="#102a43", width=2)))
+            line=dict(color="#D62828", width=2.5)))  # Crimson Red
         fig4.add_trace(go.Scatter(x=dates, y=predictions["lasso"],
             mode="lines", name=f"Lasso (MAPE: {metrics.loc['lasso','MAPE (%)']:.3f}%)",
             line=dict(color="#2A9D8F", width=1.5, dash="dash")))
@@ -443,14 +443,30 @@ with tab3:
         st.subheader("Trading Strategy Backtest: Cumulative Returns")
         st.caption("Performance of a simulated trading rule: Long USD/INR if predicted rate goes up, Short if it goes down.")
         
+        # Consistent color mapping for backtest cumulative returns chart
+        color_map = {
+            "arima_lasso": "#D62828",   # Crimson Red (prominent)
+            "lasso": "#2A9D8F",         # Teal Green
+            "arima": "#F4A261",         # Warm Orange
+            "arima_gb": "#2ecc71",      # Emerald Green
+            "gb": "#e67e22",            # Orange
+            "rf": "#9b59b6",            # Amethyst Purple
+            "arimax": "#3498db",        # Sky Blue
+            "naive": "#7f8c8d",         # Slate Gray (neutral baseline)
+            "es": "#b2bec3"             # Light Gray (neutral baseline)
+        }
+        
         fig5 = go.Figure()
         # Render cumulative returns for all models
         for model_name, rets in cum_returns.items():
+            color = color_map.get(model_name, None)
+            width = 2.5 if model_name == "arima_lasso" else 1.5
             fig5.add_trace(go.Scatter(
                 x=dates,
                 y=[v * 100 for v in rets],
                 mode="lines",
-                name=f"{model_name.upper()} (Sharpe: {metrics.loc[model_name, 'Sharpe Ratio (Rf=0)']:.2f})"
+                name=f"{model_name.upper()} (Sharpe: {metrics.loc[model_name, 'Sharpe Ratio (Rf=0)']:.2f})",
+                line=dict(color=color, width=width) if color else None
             ))
         fig5.add_hline(y=0, line_dash="dash", line_color="black", line_width=0.8)
         fig5.update_layout(height=400, template="plotly_white",
