@@ -227,16 +227,22 @@ for model_name, pred_levels in preds.items():
     final_cum_ret = cum_returns[-1] * 100
 
     # Sharpe Ratio (Ann.) - Information Ratio (Rf = 0)
-    if np.std(strat_returns) != 0:
-        sharpe_rf0 = np.sqrt(52) * (np.mean(strat_returns) / np.std(strat_returns))
+    # NOTE: use an epsilon guard, not `!= 0` -- a constant array's std() is never
+    # exactly 0 in floating point (it lands around 1e-19), so `!= 0` lets a
+    # near-zero denominator blow the ratio up to +/-1e16. EPS catches this.
+    EPS = 1e-8
+    std0 = np.std(strat_returns)
+    if std0 > EPS:
+        sharpe_rf0 = np.sqrt(52) * (np.mean(strat_returns) / std0)
     else:
         sharpe_rf0 = 0.0
 
     # Sharpe Ratio adjusted for India 91-day T-bill (~6.5% annual, which is ~0.125% per week)
     rf_weekly = 0.065 / 52
     strat_returns_excess = strat_returns - rf_weekly
-    if np.std(strat_returns_excess) != 0:
-        sharpe_rf6_5 = np.sqrt(52) * (np.mean(strat_returns_excess) / np.std(strat_returns_excess))
+    std65 = np.std(strat_returns_excess)
+    if std65 > EPS:
+        sharpe_rf6_5 = np.sqrt(52) * (np.mean(strat_returns_excess) / std65)
     else:
         sharpe_rf6_5 = 0.0
 

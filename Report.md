@@ -17,7 +17,7 @@ To eliminate look-ahead bias and spurious regressions, all models are trained on
 1. **Lasso Regression remains the optimal model**, achieving a Mean Absolute Percentage Error (**MAPE of 0.329%**), a **Mean Directional Accuracy (MDA) of 59.00%**, and a **Theil's U statistic of 0.9923** (confirming it successfully out-forecasts the Naïve Random Walk baseline). It generates an annualized **Sharpe Ratio (Rf=0) of 1.02** and a +13.58% cumulative strategy return.
 2. **Autoregressive Momentum Dominates Over Seasonal Noise**: The univariate non-seasonal **ARIMA(1,1,0)** model achieves an exceptional **57.00% MDA** and a +12.85% cumulative return, significantly outperforming the older seasonal baseline. This is grounded in our seasonal audit, which confirms that weekly USD/INR changes contain no statistically significant seasonal autocorrelation at quarterly, semi-annual, or annual lags.
 3. **Carry Cost Hurdle Disclosed**: When adjusting for India's **91-day Treasury Bill rate (~6.5% annualised)** as the risk-free carry hurdle, the strategy Sharpe Ratio turns negative (Lasso: **-0.94**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime.
-4. **Regime Dependency**: A regime analysis reveals that linear regularized models (Lasso, ARIMA) perform best during **high-volatility weeks (MDA: 61.70% & 63.83% respectively)**, when macroeconomic drivers exert clear directional pressure. Conversely, tree-based machine learning models (RF, GB) struggle during high-volatility spikes due to overfitting, performing better in quiet regimes.
+4. **Regime Dependency**: A regime analysis (fully reproducible via `recompute_metrics_fixed.py`) reveals that linear/regularized models (Lasso, ARIMA, and especially the ARIMA+Lasso Hybrid) hold up better during **high-volatility weeks** than tree-based models do, when macroeconomic drivers exert clearer directional pressure. Random Forest shows the opposite pattern, losing accuracy in high-vol weeks -- consistent with overfitting to noisy training residuals. With only 47 high-vol weeks in the test set, these splits are directional, not statistically precise.
 
 ---
 
@@ -82,15 +82,15 @@ flowchart TD
 ## 4. Econometric Rigor: Stationarity, Lags, & Seasonality
 
 ### A. Augmented Dickey-Fuller (ADF) Unit Root Tests
-To prevent spurious regression, we tested for stationarity. The ADF test checks the null hypothesis that a time series contains a unit root (is non-stationary).
+To prevent spurious regression, we tested for stationarity. The ADF test checks the null hypothesis that a time series contains a unit root (is non-stationary). These results are reproducible by running the ADF cell in `notebooks/02_eda_features.ipynb`, which resamples to weekly averages to match the frequency used throughout this project.
 
 **Empirical ADF Test Results (Weekly Averages):**
-- **USD/INR Level**: $p$-value $= 0.9912$ (Strongly Non-Stationary, contains unit root)
+- **USD/INR Level**: $p$-value $= 0.9931$ (Strongly Non-Stationary, contains unit root)
 - **USD/INR First Difference ($\Delta USDINR$)**: $p$-value $= 0.0000$ (Stationary, $I(0)$)
-- **Crude Oil Level**: $p$-value $= 0.1961$ (Non-Stationary)
+- **Crude Oil Level**: $p$-value $= 0.1553$ (Non-Stationary)
 - **Crude Oil First Difference ($\Delta Crude$)**: $p$-value $= 0.0000$ (Stationary)
-- **Interest Spread Level**: $p$-value $= 0.2838$ (Non-Stationary)
-- **Interest Spread First Difference**: $p$-value $= 0.0045$ (Stationary)
+- **Interest Spread Level**: $p$-value $= 0.3134$ (Non-Stationary)
+- **Interest Spread First Difference**: $p$-value $= 0.0028$ (Stationary)
 
 **Transformation:** All continuous features are transformed into first differences ($\Delta X_t = X_t - X_{t-1}$).
 **Look-Ahead Bias Elimination:** Exogenous predictors are lagged by 1 week ($X^{\text{lagged}}_t = X_{t-1}$).
@@ -166,10 +166,10 @@ The models were evaluated over a **200-week rolling window** (July 2022 to May 2
 | **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
 | **Gradient Boosting (GB)** | 0.359% | 0.4237 | 1.0542 | 53.50% | 0.36 | -1.58 | +4.58% |
 | **Random Forest (RF)** | 0.388% | 0.4464 | 1.1106 | 54.50% | 0.28 | -1.66 | +3.48% |
-| **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 50.00%* | 0.00 | N/A | 0.00% |
+| **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 0.00%* | 0.00 | N/A | 0.00% |
 | **Simple Exp Smoothing (SES)** | 0.331% | 0.4019 | 1.0000 | 43.00% | -0.96 | -2.92 | -11.77% |
 
-*\* Note: Naïve Directional Accuracy is 50.00% by definition since it always predicts no change (direction = 0).*
+*\* Note: Naïve Directional Accuracy is 0.00% by our `directional_accuracy()` definition, since it always predicts "no change" (predicted direction = 0), which never matches an actual non-zero direction. This reflects how we define a "correct" call, not evidence the naive model is uninformative -- it remains the Theil's U=1.0 benchmark every other model must beat.*
 
 ---
 
@@ -192,15 +192,16 @@ Over the entire dataset, Lasso fits the following coefficients:
 Lasso achieves the lowest out-of-sample RMSE (**0.3988**) and is the only model to beat the Naïve Random Walk baseline (**Theil's U = 0.9923**).
 
 ### B. Volatility Regime Analysis
-To assess structural robustness, we split the 200 test weeks into **High-Volatility** weeks ($|\text{Weekly Return}| > 0.5\%$, $n=47$) and **Low-Volatility** weeks ($n=153$).
+To assess structural robustness, we split the 200 test weeks into **High-Volatility** weeks ($|\text{Weekly Return}| > 0.5\%$, $n=47$) and **Low-Volatility** weeks ($n=153$). This split and the metrics below are fully reproducible by running `recompute_metrics_fixed.py`, which saves its output to `data/processed/regime_metrics.csv`.
 
 **Directional Accuracy (MDA %) by Volatility Regime:**
-- **Lasso**: Overall = 59.00% | High Vol = 61.70% | Low Vol = 58.17%
-- **ARIMA**: Overall = 57.00% | High Vol = **63.83%** | Low Vol = 54.90%
-- **Gradient Boosting**: Overall = 53.50% | High Vol = 51.06% | Low Vol = 54.25%
-- **Random Forest**: Overall = 54.50% | High Vol = 48.94% | Low Vol = 56.21%
+- **Lasso**: Overall = 59.50% | High Vol = 61.70% | Low Vol = 58.82%
+- **ARIMA**: Overall = 57.00% | High Vol = 61.70% | Low Vol = 55.56%
+- **ARIMA+Lasso Hybrid**: Overall = 59.00% | High Vol = **65.96%** | Low Vol = 56.86%
+- **Gradient Boosting**: Overall = 54.00% | High Vol = 51.06% | Low Vol = 54.90%
+- **Random Forest**: Overall = 54.50% | High Vol = 46.81% | Low Vol = 56.86%
 
-**Key Takeaway**: Linear regularized models (Lasso, ARIMA) perform **significantly better during high-volatility weeks**. When major macro shocks (oil jumps, interest rate shifts) occur, they exert strong, linear pressure on the exchange rate, which the regularized models capture cleanly. Conversely, tree-based machine learning models (RF, GB) overfit to the complex training residuals and fail to generalize during large market shifts, performing worse in high-volatility regimes than in calm regimes.
+**Key Takeaway**: Linear regularized models (Lasso, ARIMA) and the ARIMA+Lasso Hybrid perform **noticeably better during high-volatility weeks** than tree-based models do. The ARIMA+Lasso Hybrid shows the largest jump (56.86% → 65.96%), consistent with the idea that when major macro shocks (oil jumps, rate shifts, geopolitical shocks) occur, they exert a relatively linear directional pressure on the exchange rate that ARIMA's autoregressive structure plus Lasso's residual correction capture well. Random Forest is the clearest counterexample, *losing* 10 points of accuracy in high-vol weeks (56.86% → 46.81%) -- consistent with it overfitting to noisy training residuals and failing to generalize when the market actually moves. With only 47 high-volatility weeks in the test set, these regime-level splits should be read directionally, not as statistically precise estimates -- the sample is small enough that a handful of weeks swings the percentage by several points.
 
 ### C. Overcoming the Meese-Rogoff Puzzle
 The **Meese-Rogoff Puzzle (1983)** is a famous thesis in international economics showing that structural exchange rate models (using fundamentals like oil, CPI, or rates) fail to outperform a simple **Random Walk** model out-of-sample. 

@@ -4,11 +4,21 @@ import numpy as np
 from fredapi import Fred
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()  # reads FRED_API_KEY from a local .env file if present (never committed to git)
 
 # ── CONFIG ─────────────────────────────────────────────
 START = "2015-01-01"
 END   = datetime.today().strftime("%Y-%m-%d")
-FRED_KEY = "7ba183bf78127d55d1df4d48ef259f10"   
+FRED_KEY = os.environ.get("FRED_API_KEY")
+if not FRED_KEY:
+    raise RuntimeError(
+        "FRED_API_KEY not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html "
+        "then set it via: a) a .env file (FRED_API_KEY=your_key_here) loaded with python-dotenv, or "
+        "b) Streamlit secrets (st.secrets['FRED_API_KEY']) when deployed, or "
+        "c) export FRED_API_KEY=your_key_here in your shell before running this script."
+    )
 # ───────────────────────────────────────────────────────
 
 print(f"Starting data collection and feature engineering pipeline up to {END}...")

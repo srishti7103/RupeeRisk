@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import json
@@ -130,31 +131,37 @@ st.sidebar.markdown(
 if st.sidebar.button("Run Live Update", type="primary"):
     import subprocess
     import sys
-    
+
     status_text = st.sidebar.empty()
     progress_bar = st.sidebar.progress(0)
-    
+
     try:
         python_bin = sys.executable if sys.executable else "python"
-        
+
+        # Pass FRED_API_KEY through explicitly so the subprocess has it whether
+        # it came from a local .env file or from Streamlit Cloud's secrets.
+        env = os.environ.copy()
+        if "FRED_API_KEY" not in env and "FRED_API_KEY" in st.secrets:
+            env["FRED_API_KEY"] = st.secrets["FRED_API_KEY"]
+
         status_text.text("Scraping live feeds (Yahoo Finance & FRED)...")
         progress_bar.progress(10)
-        res1 = subprocess.run([python_bin, "collect_data.py"], capture_output=True, text=True)
+        res1 = subprocess.run([python_bin, "collect_data.py"], capture_output=True, text=True, env=env)
         if res1.returncode != 0:
             raise Exception(res1.stderr)
-            
+
         status_text.text("Training 9 models (rolling 200w validation)...")
         progress_bar.progress(40)
-        res2 = subprocess.run([python_bin, "run_pipeline.py"], capture_output=True, text=True)
+        res2 = subprocess.run([python_bin, "run_pipeline.py"], capture_output=True, text=True, env=env)
         if res2.returncode != 0:
             raise Exception(res2.stderr)
-            
+
         status_text.text("Generating out-of-sample forecast signal...")
         progress_bar.progress(80)
-        res3 = subprocess.run([python_bin, "generate_next_week_signal.py"], capture_output=True, text=True)
+        res3 = subprocess.run([python_bin, "generate_next_week_signal.py"], capture_output=True, text=True, env=env)
         if res3.returncode != 0:
             raise Exception(res3.stderr)
-            
+
         progress_bar.progress(100)
         status_text.success("✅ Update complete! Reloading page...")
         st.cache_data.clear()
@@ -581,7 +588,7 @@ with tab3:
         st.warning(f"Run the forecasting notebook first. Error: {e}")
     
     st.divider()
-    st.caption("Models: SARIMA, ARIMAX, Lasso, Random Forest, and Gradient Boosting Regressor trained on 1-week lagged exogenous features (Crude Diff, DXY Diff, Rate Spread Diff, Geo Tension Level)")
+    st.caption("Models: Naive, SES, ARIMA, ARIMAX, Lasso, Random Forest, Gradient Boosting, ARIMA+Lasso Hybrid, and ARIMA+GB Hybrid, trained on 1-week lagged exogenous features (Crude Diff, DXY Diff, Rate Spread Diff, Geo Tension Level)")
 
 # ── FOOTER ─────────────────────────────────────────────
 st.divider()

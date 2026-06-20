@@ -9,3 +9,4 @@ statsmodels
 pmdarima
 fredapi
 scikit-learn
+python-dotenv

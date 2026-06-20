@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 data/processed/*.html
 phase0_analysis.py
+.env

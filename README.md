@@ -102,10 +102,10 @@ Ranked out-of-sample performance over the rolling weekly test window (July 2022 
 | **ARIMAX** | 0.338% | 0.4085 | 1.0166 | 51.50% | 0.37 | -1.57 | +4.71% |
 | **Gradient Boosting (GB)** | 0.359% | 0.4237 | 1.0542 | 53.50% | 0.36 | -1.58 | +4.58% |
 | **Random Forest (RF)** | 0.388% | 0.4464 | 1.1106 | 54.50% | 0.28 | -1.66 | +3.48% |
-| **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 50.00%* | 0.00 | N/A | 0.00% |
+| **Naïve Random Walk** | 0.331% | 0.4019 | 1.0000 | 0.00%* | 0.00 | N/A | 0.00% |
 | **Simple Exp Smoothing (SES)** | 0.331% | 0.4019 | 1.0000 | 43.00% | -0.96 | -2.92 | -11.77% |
 
-*\* Note: Naïve Directional Accuracy is 50.00% by definition since it always predicts no change (direction = 0).*
+*\* Note: Naïve Directional Accuracy is 0.00% by our `directional_accuracy()` definition, since it always predicts "no change" (predicted direction = 0), which never matches an actual non-zero direction. This is a function of how we define a "correct" call, not evidence the naive model is uninformative -- it is still the Theil's U=1.0 benchmark every other model must beat.*
 
 ### Key Quantitative Takeaways:
 - **Hybrid Domination**: The **ARIMA+Lasso Hybrid** is the top-performing model on the platform, capturing the linear weekly autocorrelation with ARIMA and correcting residual errors using Lasso. It generates the highest cumulative return (**+18.07%**) and Sharpe ratio (**1.33**).
