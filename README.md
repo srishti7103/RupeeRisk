@@ -113,14 +113,6 @@ Ranked out-of-sample performance over the rolling weekly test window (numbers sh
 - **Multicollinearity Resolution**: macro drivers (Crude, DXY, rate spread) are highly correlated, so standard ARIMAX coefficient estimates become unstable. Lasso's L1 regularization drives redundant coefficients to zero, which is why standalone Lasso also beats ARIMAX cleanly (MDA 59.0% vs 51.5%).
 - **The Meese-Rogoff Puzzle (1983)**: a structural model needs to beat a Random Walk to be useful. Theil's U < 1 for ARIMA, Lasso, and both hybrids confirms they do — by a modest but real margin — validating that macro and geopolitical fundamentals carry genuine predictive signal once look-ahead bias and non-stationarity are correctly handled.
 - **Tree-based models underperform**: Random Forest and Gradient Boosting post higher RMSE and lower MDA than the linear/regularized models here. With ~400 training weeks and 8 features, the tree ensembles likely overfit noise rather than capture genuine signal — a real limitation worth stating rather than hiding.
-
-*\* Note: Naïve Directional Accuracy is 0.00% by our `directional_accuracy()` definition, since it always predicts "no change" (predicted direction = 0), which never matches an actual non-zero direction. This is a function of how we define a "correct" call, not evidence the naive model is uninformative -- it is still the Theil's U=1.0 benchmark every other model must beat.*
-
-### Key Quantitative Takeaways:
-- **Hybrid Domination**: The **ARIMA+Lasso Hybrid** is the top-performing model on the platform, capturing the linear weekly autocorrelation with ARIMA and correcting residual errors using Lasso. It generates the highest cumulative return (**+18.07%**) and Sharpe ratio (**1.33**).
-- **Lasso Regularization**: Standalone Lasso also excels, achieving the lowest out-of-sample error (**RMSE: 0.3988**, **Theil's U: 0.9923**) and a directional accuracy of **59.00%** by zeroing out collinear indicators.
-- **Carry Hurdle Disclosure**: When accounting for the **91-day T-bill carry cost (~6.5%)**, excess Sharpe ratios turn negative for all models (ARIMA+Lasso: **-0.65**), indicating the steep hurdle directional FX traders face in emerging markets.
-
 ---
 
 ## Running the Project Locally
