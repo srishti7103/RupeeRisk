@@ -1,10 +1,10 @@
 {
-    "as_of_date": "2026-06-21",
-    "next_week_date": "2026-06-28",
-    "current_rate": 94.78190002441406,
-    "predicted_change": -0.2103812472937544,
-    "predicted_rate": 94.5715187771203,
-    "signal": "STRENGTHEN",
-    "change_paise": 21.03812472937544,
+    "as_of_date": "2026-07-19",
+    "next_week_date": "2026-07-26",
+    "current_rate": 95.3249969482422,
+    "predicted_change": 0.04094485439161895,
+    "predicted_rate": 95.36594180263383,
+    "signal": "WEAKEN",
+    "change_paise": 4.094485439161895,
     "model_type": "ARIMA+Lasso_Hybrid"
 }

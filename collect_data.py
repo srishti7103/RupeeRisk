@@ -147,12 +147,31 @@ for col in ["USDINR", "NIFTY", "GOLD", "CRUDE", "DXY"]:
 master_df["INR_vol_30d"] = master_df["USDINR_ret"].rolling(30).std()
 master_df["Rate_Spread"] = master_df["US_FEDFUNDS"] - master_df["RBI_REPO"]
 
-# Geopolitical tension pulse
-master_df["Geo_Tension"] = 0
-for _, row in events.iterrows():
-    event_date = row["date"]
-    mask = (master_df.index >= event_date) & (master_df.index <= event_date + pd.Timedelta(days=7))
-    master_df.loc[mask, "Geo_Tension"] = 1
+# Geopolitical tension index (GDELT-sourced, exponentially decaying, severity-weighted)
+gdelt_path = "data/raw/gdelt_tension_index.csv"
+if os.path.exists(gdelt_path):
+    print("Loading GDELT-sourced decaying tension index...")
+    gdelt_df = pd.read_csv(gdelt_path, index_col=0, parse_dates=True)
+    # Map columns
+    col_mapping = {
+        'goldstein_Combined': 'Geo_Tension',
+        'goldstein_DirectFX_IndiaPak': 'Geo_Tension_DirectFX_IndiaPak',
+        'goldstein_DirectFX_IndiaChina': 'Geo_Tension_DirectFX_IndiaChina',
+        'goldstein_OilSupply': 'Geo_Tension_OilSupply',
+        'goldstein_RiskOff_RusUkr': 'Geo_Tension_RiskOff_RusUkr',
+        'goldstein_RiskOff_Global': 'Geo_Tension_RiskOff_Global'
+    }
+    gdelt_df = gdelt_df.rename(columns=col_mapping)
+    master_df = master_df.join(gdelt_df, how="left")
+    master_df.fillna({col: 0.0 for col in col_mapping.values()}, inplace=True)
+else:
+    print("[WARNING] GDELT tension index file not found. Creating empty columns.")
+    master_df["Geo_Tension"] = 0.0
+    master_df["Geo_Tension_DirectFX_IndiaPak"] = 0.0
+    master_df["Geo_Tension_DirectFX_IndiaChina"] = 0.0
+    master_df["Geo_Tension_OilSupply"] = 0.0
+    master_df["Geo_Tension_RiskOff_RusUkr"] = 0.0
+    master_df["Geo_Tension_RiskOff_Global"] = 0.0
 
 master_df["Month"] = master_df.index.month
 master_df["Year"]  = master_df.index.year

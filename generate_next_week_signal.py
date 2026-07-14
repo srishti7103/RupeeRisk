@@ -9,7 +9,15 @@ import json
 df = pd.read_csv("data/processed/master_df.csv", index_col=0, parse_dates=True)
 
 # Weekly resampling
-weekly = df[["USDINR", "CRUDE", "DXY", "Rate_Spread", "Geo_Tension"]].resample("W").mean()
+tension_cols = [
+    "Geo_Tension", 
+    "Geo_Tension_DirectFX_IndiaPak", 
+    "Geo_Tension_DirectFX_IndiaChina", 
+    "Geo_Tension_OilSupply", 
+    "Geo_Tension_RiskOff_RusUkr", 
+    "Geo_Tension_RiskOff_Global"
+]
+weekly = df[["USDINR", "CRUDE", "DXY", "Rate_Spread"] + tension_cols].resample("W").mean()
 weekly.dropna(inplace=True)
 
 # Compute first differences
@@ -19,7 +27,7 @@ weekly["DXY_diff"] = weekly["DXY"].diff()
 weekly["Rate_Spread_diff"] = weekly["Rate_Spread"].diff()
 
 # Exogenous base variables to lag
-exog_base = ["CRUDE_diff", "DXY_diff", "Rate_Spread_diff", "Geo_Tension"]
+exog_base = ["CRUDE_diff", "DXY_diff", "Rate_Spread_diff"] + tension_cols
 lagged_exog = weekly[exog_base].shift(1)
 lagged_exog.columns = [c + "_lag1" for c in exog_base]
 
@@ -29,8 +37,10 @@ weekly["inr_mom_12w"] = weekly["USDINR_diff"].rolling(12).mean().shift(1)
 weekly["is_fiscal_yr_end"] = (weekly.index.month == 3).astype(float)
 weekly["is_qtr_end"] = weekly.index.month.isin([3, 6, 9, 12]).astype(float)
 
+tension_lagged_cols = [c + "_lag1" for c in tension_cols]
 features_list = [
-    "CRUDE_diff_lag1", "DXY_diff_lag1", "Rate_Spread_diff_lag1", "Geo_Tension_lag1",
+    "CRUDE_diff_lag1", "DXY_diff_lag1", "Rate_Spread_diff_lag1"
+] + tension_lagged_cols + [
     "inr_mom_4w", "inr_mom_12w", "is_fiscal_yr_end", "is_qtr_end"
 ]
 
@@ -77,7 +87,6 @@ next_week_date = last_date + pd.Timedelta(weeks=1)
 next_crude_diff_lag1 = weekly["CRUDE_diff"].iloc[-1]
 next_dxy_diff_lag1 = weekly["DXY_diff"].iloc[-1]
 next_rate_spread_diff_lag1 = weekly["Rate_Spread_diff"].iloc[-1]
-next_geo_tension_lag1 = weekly["Geo_Tension"].iloc[-1]
 
 # Momentum at t_last (known at last_date)
 next_inr_mom_4w = weekly["USDINR_diff"].iloc[-4:].mean()
@@ -88,16 +97,21 @@ next_is_fiscal_yr_end = float(next_week_date.month == 3)
 next_is_qtr_end = float(next_week_date.month in [3, 6, 9, 12])
 
 # Build next week's feature vector
-X_next = pd.DataFrame([{
+X_next_dict = {
     "CRUDE_diff_lag1": next_crude_diff_lag1,
     "DXY_diff_lag1": next_dxy_diff_lag1,
     "Rate_Spread_diff_lag1": next_rate_spread_diff_lag1,
-    "Geo_Tension_lag1": next_geo_tension_lag1,
+}
+for col in tension_cols:
+    X_next_dict[col + "_lag1"] = weekly[col].iloc[-1]
+
+X_next_dict.update({
     "inr_mom_4w": next_inr_mom_4w,
     "inr_mom_12w": next_inr_mom_12w,
     "is_fiscal_yr_end": next_is_fiscal_yr_end,
     "is_qtr_end": next_is_qtr_end
-}])
+})
+X_next = pd.DataFrame([X_next_dict], columns=features_list)
 
 # 3. Fit Lasso on X to predict the residuals
 model_lasso_resid = Lasso(alpha=0.001).fit(X, arima_residuals)

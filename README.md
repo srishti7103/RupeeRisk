@@ -2,7 +2,7 @@
 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-App-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://rupeerisk.streamlit.app)
 
-RupeeRisk is an international finance and machine learning platform that forecasts the USD/INR exchange rate by engineering geopolitical tension indicators and combining them with macroeconomic factors. 
+RupeeRisk is an international finance and machine learning platform that forecasts the USD/INR exchange rate using a severity-weighted, decaying geopolitical tension index derived from GDELT Goldstein Scale scores and combined with macroeconomic factors. 
 
 This platform implements a statistically rigorous pipeline, compares classical econometrics against machine learning regressors, and backtests a simulated trading strategy.
 
@@ -23,7 +23,7 @@ graph TD
     subgraph Data Sources
         YF["yfinance: USD/INR, Crude, DXY, Nifty, Gold"]
         FRED["FRED API & RBI: CPI, yields & repo rates"]
-        GEOP["Geopolitical Events Database (Manually Curated)"]
+        GEOP["GDELT Goldstein Scale (BigQuery) & Decaying Tension Index"]
     end
 
     %% Preprocessing & Engine
@@ -93,27 +93,27 @@ The platform utilizes **weekly averages** rather than daily or monthly data, bas
 
 Ranked out-of-sample performance over the rolling weekly test window (numbers shift slightly each time the live pipeline re-runs, since the test window always ends "today" — see `data/processed/model_metrics.csv` for the current authoritative run):
 
-| Model                   | MAPE (%) | RMSE   | MDA (%) | Sharpe Ratio (Rf=0) | Cumulative Return (%) |
-| ------------------------ | -------- | ------ | ------- | -------------------- | ---------------------- |
-| **ARIMA+Lasso Hybrid**    | 0.327%   | 0.398  | 59.5%   | **1.35**             | **+18.36%**            |
-| **Lasso**                 | 0.326%   | 0.397  | 59.0%   | 1.06                 | +14.20%                |
-| **ARIMA**                 | 0.326%   | 0.403  | 57.5%   | 0.99                 | +13.13%                |
-| **ARIMA+GB Hybrid**       | 0.357%   | 0.424  | 54.5%   | 0.64                 | +8.31%                 |
-| **Gradient Boosting (GB)**| 0.354%   | 0.419  | 54.0%   | 0.52                 | +6.71%                 |
-| **Random Forest (RF)**    | 0.382%   | 0.443  | 54.5%   | 0.29                 | +3.58%                 |
-| **ARIMAX**                | 0.333%   | 0.405  | 51.5%   | 0.38                 | +4.81%                 |
-| **Naive Random Walk**     | 0.331%   | 0.402  | 0.0%*   | 0.00                 | +0.00%                 |
-| **Exponential Smoothing** | 0.331%   | 0.402  | 42.5%   | -0.99                | -11.98%                |
+| Model                   | MAPE (%) | RMSE   | MDA (%) | Sharpe Ratio (Rf=0) | Sharpe Ratio (Rf=6.5%) | Cumulative Return (%) |
+| ------------------------ | -------- | ------ | ------- | -------------------- | ---------------------- | ---------------------- |
+| **ARIMA+Lasso Hybrid**    | 0.331%   | 0.401  | **61.0%**| **1.37**             | -0.60                  | **+18.72%**            |
+| **Lasso**                 | 0.334%   | 0.401  | 59.0%   | 1.03                 | -0.93                  | +13.83%                |
+| **ARIMA**                 | 0.328%   | 0.405  | 57.0%   | 0.95                 | -1.02                  | +12.57%                |
+| **ARIMA+GB Hybrid**       | 0.364%   | 0.431  | 57.5%   | 0.90                 | -1.06                  | +11.98%                |
+| **ARIMAX**                | 0.334%   | 0.408  | 56.5%   | 0.76                 | -1.19                  | +10.03%                |
+| **Gradient Boosting (GB)**| 0.360%   | 0.429  | 55.0%   | 0.50                 | -1.45                  | +6.34%                 |
+| **Random Forest (RF)**    | 0.388%   | 0.446  | 53.0%   | -0.13                | -2.07                  | -1.88%                 |
+| **Naive Random Walk**     | 0.333%   | 0.404  | 0.0%*   | 0.00                 | 0.00                   | +0.00%                 |
+| **Exponential Smoothing** | 0.333%   | 0.404  | 43.0%   | -0.95                | -2.91                  | -11.55%                |
 
 *\* Naive MDA is 0.00% by our `directional_accuracy()` definition, since it always predicts "no change" (direction = 0), which never matches an actual non-zero direction. It remains the Theil's U = 1.0 benchmark every other model must beat.*
 
 ### Key Quantitative Takeaways:
 
-- **ARIMA+Lasso Hybrid wins overall**: fitting Lasso on the ARIMA model's residuals captures structure the linear AR term misses, producing both the best MDA (59.5%) and the best Sharpe Ratio (1.35) of any model.
-- Risk-adjusted performance depends on the benchmark used. Against a 0% risk-free rate, ARIMA+Lasso Hybrid posts a Sharpe of 1.35 — but against India's actual repo-rate-level risk-free rate (~6.5%), the same strategy's Sharpe turns negative (-0.63). The model still shows genuine directional skill (Theil's U < 1, MDA 59.5%), but this is a forecasting signal, not a trading strategy that beats holding a risk-free asset.
-- **Multicollinearity Resolution**: macro drivers (Crude, DXY, rate spread) are highly correlated, so standard ARIMAX coefficient estimates become unstable. Lasso's L1 regularization drives redundant coefficients to zero, which is why standalone Lasso also beats ARIMAX cleanly (MDA 59.0% vs 51.5%).
+- **ARIMA+Lasso Hybrid wins overall**: fitting Lasso on the ARIMA model's residuals captures structure the linear AR term misses, producing both the best MDA (61.0%) and the best Sharpe Ratio (1.37) of any model.
+- **Carry Cost Hurdle & Sharpe Disclosures**: The Sharpe Ratios reported with Rf=0 represent Information Ratios — excess return per unit of volatility relative to zero. When adjusted for India's 91-day Treasury Bill rate (~6.5% annualised, ~0.125% per week), the Sharpe Ratios for all models turn negative (ARIMA+Lasso Hybrid: **-0.60**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime. The project's value lies in demonstrating forecasting skill (Theil's U < 1, MDA > 50%) rather than a standalone trading strategy.
+- **Multicollinearity Resolution**: macro drivers (Crude, DXY, rate spread) are highly correlated, so standard ARIMAX coefficient estimates become unstable. Lasso's L1 regularization drives redundant coefficients to zero, which is why standalone Lasso also beats ARIMAX cleanly (MDA 59.0% vs 56.5%).
 - **The Meese-Rogoff Puzzle (1983)**: a structural model needs to beat a Random Walk to be useful. Theil's U < 1 for ARIMA, Lasso, and both hybrids confirms they do — by a modest but real margin — validating that macro and geopolitical fundamentals carry genuine predictive signal once look-ahead bias and non-stationarity are correctly handled.
-- **Tree-based models underperform**: Random Forest and Gradient Boosting post higher RMSE and lower MDA than the linear/regularized models here. With ~400 training weeks and 8 features, the tree ensembles likely overfit noise rather than capture genuine signal — a real limitation worth stating rather than hiding.
+- **Tree-based models underperform**: Random Forest and Gradient Boosting post higher RMSE and lower MDA than the linear/regularized models here. With ~400 training weeks and 15 features, the tree ensembles likely overfit noise rather than capture genuine signal — a real limitation worth stating rather than hiding.
 ---
 
 ## Running the Project Locally
@@ -132,7 +132,8 @@ The platform is designed to be completely dynamic. If you or another user clones
 
 To execute the entire data collection, feature engineering, model training, and signal generation pipeline in one command:
 ```bash
-python update_all.py
+python fetch_gdelt_data.py   # Computes the GDELT tension index features (runs fallback locally if BQ credentials not set)
+python update_all.py         # Runs the end-to-end update
 ```
 
 This script will run:
@@ -157,8 +158,10 @@ streamlit run app.py
 - `data/`: Contains raw downloaded datasets and processed outputs (model metrics, predictions, Lasso coefficients, next-week signal).
 - `notebooks/`: Modular notebooks containing the research, data collection, EDA, econometrics, and modeling code.
 - `app.py`: The interactive multi-tab Streamlit dashboard.
+- `fetch_gdelt_data.py`: Queries GDELT from Google BigQuery public events and processes daily tension features using exponentially decaying maximum logic.
 - `run_pipeline.py`: The full out-of-sample backtesting pipeline.
 - `generate_next_week_signal.py`: Generates the out-of-sample prediction for the upcoming week.
 - `requirements.txt`: Project package dependencies.
 - `README.md`: Project summary documentation.
 - `Report.md`: In-depth quantitative research paper.
+

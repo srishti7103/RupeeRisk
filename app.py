@@ -271,7 +271,13 @@ with tab1:
     
     # Correlation heatmap
     st.subheader("Macro Factor Correlations with INR")
-    corr_cols = ["USDINR","CRUDE","GOLD","DXY","NIFTY","INDIAVIX","Rate_Spread","Geo_Tension"]
+    corr_cols = [
+        "USDINR", "CRUDE", "GOLD", "DXY", "NIFTY", "INDIAVIX", "Rate_Spread", 
+        "Geo_Tension", "Geo_Tension_DirectFX_IndiaPak", "Geo_Tension_DirectFX_IndiaChina", 
+        "Geo_Tension_OilSupply", "Geo_Tension_RiskOff_RusUkr", "Geo_Tension_RiskOff_Global"
+    ]
+    # Filter out columns that don't exist yet to be safe
+    corr_cols = [c for c in corr_cols if c in df.columns]
     corr = df[corr_cols].dropna().corr()
     
     fig2 = go.Figure(go.Heatmap(
@@ -280,8 +286,8 @@ with tab1:
         text=corr.round(2).values, texttemplate="%{text}",
         colorbar=dict(title="r")
     ))
-    fig2.update_layout(height=400, template="plotly_white",
-                       title="Correlation Matrix — INR vs Macro Drivers")
+    fig2.update_layout(height=450, template="plotly_white",
+                       title="Correlation Matrix — INR vs Macro & GDELT Drivers")
     st.plotly_chart(fig2, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────
@@ -368,6 +374,64 @@ with tab2:
             "Max INR Depreciation (10d)": f"{max_dep:+.2f}%"
         })
     st.dataframe(pd.DataFrame(summary), hide_index=True, use_container_width=True)
+    
+    st.divider()
+    
+    # Continuous GDELT Tension Index timeline
+    st.subheader("GDELT-Sourced Severity-Weighted Geopolitical Tension Index Timeline")
+    st.caption("Continuous daily tension indices by transmission channel, computed using GDELT Goldstein Scale scores and exponentially decaying maximum logic.")
+    
+    tension_channels = {
+        "Combined (Max Across Channels)": "Geo_Tension",
+        "Direct FX (India-Pakistan)": "Geo_Tension_DirectFX_IndiaPak",
+        "Direct FX (India-China)": "Geo_Tension_DirectFX_IndiaChina",
+        "Oil Supply (Middle East)": "Geo_Tension_OilSupply",
+        "Risk-Off (Russia-Ukraine)": "Geo_Tension_RiskOff_RusUkr",
+        "Risk-Off (Global)": "Geo_Tension_RiskOff_Global"
+    }
+    # Keep only those columns present in the dataframe
+    tension_channels = {k: v for k, v in tension_channels.items() if v in df.columns}
+    
+    selected_channels = st.multiselect(
+        "Select Channels to Plot:",
+        options=list(tension_channels.keys()),
+        default=[k for k in tension_channels.keys() if tension_channels[k] in ["Geo_Tension", "Geo_Tension_OilSupply", "Geo_Tension_RiskOff_RusUkr"]]
+    )
+    
+    if selected_channels:
+        fig_timeline = go.Figure()
+        
+        channel_colors = {
+            "Geo_Tension": "#E63946",
+            "Geo_Tension_DirectFX_IndiaPak": "#457B9D",
+            "Geo_Tension_DirectFX_IndiaChina": "#1D3557",
+            "Geo_Tension_OilSupply": "#F4A261",
+            "Geo_Tension_RiskOff_RusUkr": "#2A9D8F",
+            "Geo_Tension_RiskOff_Global": "#9B59B6"
+        }
+        
+        for name in selected_channels:
+            col = tension_channels[name]
+            color = channel_colors.get(col, "gray")
+            fig_timeline.add_trace(go.Scatter(
+                x=df.index,
+                y=df[col],
+                mode="lines",
+                name=name,
+                line=dict(color=color, width=1.5)
+            ))
+            
+        fig_timeline.update_layout(
+            height=400,
+            template="plotly_dark",
+            xaxis_title="Date",
+            yaxis_title="Tension Score (Goldstein-equivalent)",
+            plot_bgcolor="#0D1117",
+            paper_bgcolor="#0D1117",
+            font=dict(color="#F0F6FC"),
+            legend=dict(orientation="h", y=1.15)
+        )
+        st.plotly_chart(fig_timeline, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────
 # TAB 3: FORECASTING
@@ -509,7 +573,12 @@ with tab3:
                     "CRUDE_diff_lag1": "Crude Oil (1w diff lag)",
                     "DXY_diff_lag1": "US Dollar Index (1w diff lag)",
                     "Rate_Spread_diff_lag1": "US-India Interest Spread (1w diff lag)",
-                    "Geo_Tension_lag1": "Geopolitical Tension (1w lag)",
+                    "Geo_Tension_lag1": "Combined Geo Tension (1w lag)",
+                    "Geo_Tension_DirectFX_IndiaPak_lag1": "India-Pak Tension (1w lag)",
+                    "Geo_Tension_DirectFX_IndiaChina_lag1": "India-China Tension (1w lag)",
+                    "Geo_Tension_OilSupply_lag1": "Oil Supply Tension (1w lag)",
+                    "Geo_Tension_RiskOff_RusUkr_lag1": "Russia-Ukraine Tension (1w lag)",
+                    "Geo_Tension_RiskOff_Global_lag1": "Global Risk-Off Tension (1w lag)",
                     "inr_mom_4w": "4-Week INR Momentum",
                     "inr_mom_12w": "12-Week INR Momentum",
                     "is_fiscal_yr_end": "Fiscal Year-End Dummy (March)",
