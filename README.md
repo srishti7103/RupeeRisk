@@ -95,13 +95,13 @@ Ranked out-of-sample performance over the rolling weekly test window (numbers sh
 
 | Model                   | MAPE (%) | RMSE   | MDA (%) | Sharpe Ratio (Rf=0) | Sharpe Ratio (Rf=6.5%) | Cumulative Return (%) |
 | ------------------------ | -------- | ------ | ------- | -------------------- | ---------------------- | ---------------------- |
-| **ARIMA+Lasso Hybrid**    | 0.331%   | 0.401  | **61.0%**| **1.37**             | -0.60                  | **+18.72%**            |
-| **Lasso**                 | 0.334%   | 0.401  | 59.0%   | 1.03                 | -0.93                  | +13.83%                |
-| **ARIMA**                 | 0.328%   | 0.405  | 57.0%   | 0.95                 | -1.02                  | +12.57%                |
-| **ARIMA+GB Hybrid**       | 0.364%   | 0.431  | 57.5%   | 0.90                 | -1.06                  | +11.98%                |
-| **ARIMAX**                | 0.334%   | 0.408  | 56.5%   | 0.76                 | -1.19                  | +10.03%                |
-| **Gradient Boosting (GB)**| 0.360%   | 0.429  | 55.0%   | 0.50                 | -1.45                  | +6.34%                 |
-| **Random Forest (RF)**    | 0.388%   | 0.446  | 53.0%   | -0.13                | -2.07                  | -1.88%                 |
+| **ARIMAX**                | 0.341%   | 0.407  | 57.5%   | **1.24**             | **-0.73**              | **+16.82%**            |
+| **Gradient Boosting (GB)**| 0.349%   | 0.406  | 57.5%   | 1.23                 | -0.74                  | +16.68%                |
+| **Lasso**                 | 0.337%   | 0.403  | **58.0%**| 1.09                 | -0.88                  | +14.60%                |
+| **ARIMA+Lasso Hybrid**    | 0.337%   | 0.404  | 56.5%   | 1.06                 | -0.90                  | +14.20%                |
+| **ARIMA**                 | **0.328%**| 0.405  | 57.0%   | 0.95                 | -1.02                  | +12.57%                |
+| **ARIMA+GB Hybrid**       | 0.347%   | 0.418  | 57.0%   | 0.84                 | -1.12                  | +11.11%                |
+| **Random Forest (RF)**    | 0.354%   | 0.413  | 48.5%   | 0.28                 | -1.67                  | +3.43%                 |
 | **Naive Random Walk**     | 0.333%   | 0.404  | 0.0%*   | 0.00                 | 0.00                   | +0.00%                 |
 | **Exponential Smoothing** | 0.333%   | 0.404  | 43.0%   | -0.95                | -2.91                  | -11.55%                |
 
@@ -109,11 +109,12 @@ Ranked out-of-sample performance over the rolling weekly test window (numbers sh
 
 ### Key Quantitative Takeaways:
 
-- **ARIMA+Lasso Hybrid wins overall**: fitting Lasso on the ARIMA model's residuals captures structure the linear AR term misses, producing both the best MDA (61.0%) and the best Sharpe Ratio (1.37) of any model.
-- **Carry Cost Hurdle & Sharpe Disclosures**: The Sharpe Ratios reported with Rf=0 represent Information Ratios — excess return per unit of volatility relative to zero. When adjusted for India's 91-day Treasury Bill rate (~6.5% annualised, ~0.125% per week), the Sharpe Ratios for all models turn negative (ARIMA+Lasso Hybrid: **-0.60**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime. The project's value lies in demonstrating forecasting skill (Theil's U < 1, MDA > 50%) rather than a standalone trading strategy.
-- **Multicollinearity Resolution**: macro drivers (Crude, DXY, rate spread) are highly correlated, so standard ARIMAX coefficient estimates become unstable. Lasso's L1 regularization drives redundant coefficients to zero, which is why standalone Lasso also beats ARIMAX cleanly (MDA 59.0% vs 56.5%).
-- **The Meese-Rogoff Puzzle (1983)**: a structural model needs to beat a Random Walk to be useful. Theil's U < 1 for ARIMA, Lasso, and both hybrids confirms they do — by a modest but real margin — validating that macro and geopolitical fundamentals carry genuine predictive signal once look-ahead bias and non-stationarity are correctly handled.
-- **Tree-based models underperform**: Random Forest and Gradient Boosting post higher RMSE and lower MDA than the linear/regularized models here. With ~400 training weeks and 15 features, the tree ensembles likely overfit noise rather than capture genuine signal — a real limitation worth stating rather than hiding.
+- **ARIMAX and Gradient Boosting (GB) dominate risk-adjusted returns**: With the transition to dense, channel-specific GDELT tension indices, multivariate models are supplied with continuous, rich signals. ARIMAX achieves the top Sharpe ratio of **1.24** (+16.82% cumulative return), and Gradient Boosting achieves **1.23** (+16.68% cumulative return).
+- **Lasso is the most accurate directional predictor**: Standalone Lasso L1 regularization achieves the highest Mean Directional Accuracy (**58.0%**) and beats the Random Walk baseline (**Theil's U = 0.9969**).
+- **Carry Cost Hurdle & Sharpe Disclosures**: The Sharpe Ratios reported with Rf=0 represent Information Ratios — excess return per unit of volatility relative to zero. When adjusted for India's 91-day Treasury Bill rate (~6.5% annualised, ~0.125% per week), the Sharpe Ratios for all models turn negative (ARIMAX: **-0.73**, GB: **-0.74**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime. The project's value lies in demonstrating forecasting skill (Theil's U < 1, MDA > 50%) rather than a standalone trading strategy.
+- **Multicollinearity & regularized feature selection**: Lasso's L1 regularization successfully selects the most predictive channel-specific tension features (e.g. Russia-Ukraine war and global Risk-Off tension lags) while driving redundant noise to zero, preventing the coefficient blowup that typically compromises standard ARIMAX.
+- **Overperforming the Random Walk**: Theil's U < 1 for Lasso and the ARIMA+Lasso hybrid validates that macroeconomic and geopolitical fundamentals carry genuine out-of-sample predictive signals once look-ahead bias and non-stationarity are correctly handled.
+- **Tree-based model bifurcation**: While Gradient Boosting performs exceptionally well by picking up non-linear interactions across channel features, bagging-based Random Forest lags significantly (MDA 48.5%, Sharpe 0.28), highlighting that tree ensembles behave very differently on moderate-sized macroeconomic datasets.
 ---
 
 ## Running the Project Locally

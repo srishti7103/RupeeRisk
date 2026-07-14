@@ -14,11 +14,11 @@ By engineering a custom **Geopolitical Tension Indicator** and integrating globa
 To eliminate look-ahead bias and spurious regressions, all models are trained on first-differenced (stationary) data with a 1-week feature lag ($X_{t-1}$) and evaluated using a rolling 1-step-ahead out-of-sample backtest over an extended **200-week test window** (July 2022 to May 2026). This extended test window spans multiple macroeconomic regimes, including the Federal Reserve's rate hike cycle and aggressive interventions by the Reserve Bank of India (RBI).
 
 *Key Findings:
-1. **ARIMA+Lasso Hybrid is the optimal model**, achieving a Mean Absolute Percentage Error (**MAPE of 0.331%**), a **Mean Directional Accuracy (MDA) of 61.00%**, and a **Theil's U statistic of 0.9930** (confirming it successfully out-forecasts the Naïve Random Walk baseline). It generates an annualized **Sharpe Ratio (Rf=0) of 1.37** and a +18.72% cumulative strategy return.
-2. **Lasso stands out as the best standalone structural model**, with a **59.00% MDA**, a **1.03 Sharpe Ratio**, and a **+13.83% cumulative return**, demonstrating that macroeconomic and geopolitical features contain genuine predictive power when regularized to resolve multicollinearity.
-3. **Autoregressive Momentum Dominates Over Seasonal Noise**: The univariate non-seasonal **ARIMA(1,1,0)** model achieves an exceptional **57.00% MDA** and a +12.57% cumulative return. This is grounded in our seasonal audit, which confirms that weekly USD/INR changes contain no statistically significant seasonal autocorrelation at quarterly, semi-annual, or annual lags.
-4. **Carry Cost Hurdle Disclosed**: When adjusting for India's **91-day Treasury Bill rate (~6.5% annualised)** as the risk-free carry hurdle, the strategy Sharpe Ratio turns negative (ARIMA+Lasso Hybrid: **-0.60**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime.
-5. **Regime Dependency**: A regime analysis reveals that linear/regularized models (Lasso, ARIMA, and especially the ARIMA+Lasso Hybrid) hold up better during **high-volatility weeks** than tree-based models do, when macroeconomic drivers exert clearer directional pressure. The ARIMA+Lasso Hybrid achieves **66.67% High-Vol MDA** vs. **43.75%** for Random Forest -- consistent with RF overfitting to noisy training residuals and failing to generalize during large market moves. With only 48 high-vol weeks in the test set, these splits are directional, not statistically precise.e.
+1. **ARIMAX and Gradient Boosting (GB) are the optimal models for risk-adjusted returns**: With the transition to dense, channel-specific GDELT tension indices, daily scores are aggregated and decaying features are built. ARIMAX achieves the top Sharpe ratio of **1.24** (+16.82% cumulative return), and Gradient Boosting achieves **1.23** (+16.68% cumulative return).
+2. **Lasso stands out as the most accurate directional model**: Standalone Lasso L1 regularization achieves the highest Mean Directional Accuracy (**58.0%**) and beats the Random Walk baseline (**Theil's U = 0.9969**), with a Sharpe ratio of **1.09** and +14.60% cumulative return.
+3. **Autoregressive Momentum Dominates Over Seasonal Noise**: The univariate non-seasonal **ARIMA(1,1,0)** model achieves a competitive **57.00% MDA** and a +12.57% cumulative return, confirming that weekly USD/INR changes contain no statistically significant seasonal autocorrelation.
+4. **Carry Cost Hurdle Disclosed**: When adjusting for India's **91-day Treasury Bill rate (~6.5% annualised)** as the risk-free carry hurdle, the Sharpe Ratios for all models turn negative (ARIMAX: **-0.73**, GB: **-0.74**). This reveals a critical quantitative carry hurdle in a low-volatility, central-bank-defended exchange rate regime.
+5. **Regime Dependency**: A regime analysis reveals that linear/regularized models (Lasso, ARIMA) and Gradient Boosting hold up better during **high-volatility weeks** than Random Forest does. ARIMA achieves **64.58% High-Vol MDA** and Lasso achieves **60.42% High-Vol MDA** vs. **52.08%** for Random Forest, which suffers from overfitting to noise.
 
 ---
 
@@ -160,13 +160,13 @@ The models were evaluated over a **200-week rolling window** (July 2022 to May 2
 
 | Model | MAPE (%) | RMSE | Theil's U | MDA (%) | Sharpe (Rf=0) | Sharpe (Rf=6.5%) | Cumulative Return (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 **ARIMA+Lasso Hybrid** | 0.331% | 0.4011 | 0.9930 | **61.00%** | **1.37** | **-0.60** | **+18.72%** |
-| 🥈 **Lasso** | 0.334% | **0.4013** | **0.9935** | **59.00%** | 1.03 | -0.93 | +13.83% |
-| 🥉 **ARIMA** | **0.328%** | 0.4046 | 1.0016 | 57.00% | 0.95 | -1.02 | +12.57% |
-| **ARIMA+GB Hybrid** | 0.364% | 0.4309 | 1.0668 | 57.50% | 0.90 | -1.06 | +11.98% |
-| **ARIMAX** | 0.334% | 0.4081 | 1.0104 | 56.50% | 0.76 | -1.19 | +10.03% |
-| **Gradient Boosting (GB)** | 0.360% | 0.4291 | 1.0625 | 55.00% | 0.50 | -1.45 | +6.34% |
-| **Random Forest (RF)** | 0.388% | 0.4462 | 1.1049 | 53.00% | -0.13 | -2.07 | -1.88% |
+| 🥇 **ARIMAX** | 0.341% | 0.4074 | 1.0087 | 57.50% | **1.24** | **-0.73** | **+16.82%** |
+| 🥈 **Gradient Boosting (GB)** | 0.349% | 0.4056 | 1.0042 | 57.50% | 1.23 | -0.74 | +16.68% |
+| 🥉 **Lasso** | 0.337% | **0.4026** | **0.9969** | **58.00%** | 1.09 | -0.88 | +14.60% |
+| **ARIMA+Lasso Hybrid** | 0.337% | 0.4036 | 0.9992 | 56.50% | 1.06 | -0.90 | +14.20% |
+| **ARIMA** | **0.328%** | 0.4046 | 1.0016 | 57.00% | 0.95 | -1.02 | +12.57% |
+| **ARIMA+GB Hybrid** | 0.347% | 0.4181 | 1.0351 | 57.00% | 0.84 | -1.12 | +11.11% |
+| **Random Forest (RF)** | 0.354% | 0.4134 | 1.0236 | 48.50% | 0.28 | -1.67 | +3.43% |
 | **Naïve Random Walk** | 0.333% | 0.4039 | 1.0000 | 0.00%* | 0.00 | N/A | 0.00% |
 | **Simple Exp Smoothing (SES)** | 0.333% | 0.4039 | 1.0000 | 43.00% | -0.95 | -2.91 | -11.55% |
 
@@ -201,29 +201,26 @@ Lasso achieves a competitive out-of-sample RMSE (**0.4013**) and beats the Naïv
 To assess structural robustness, we split the 200 test weeks into **High-Volatility** weeks ($|\text{Weekly Return}| > 0.5\%$, $n=48$) and **Low-Volatility** weeks ($n=152$). This split and the metrics below are fully reproducible by running `recompute_metrics_fixed.py`, which saves its output to `data/processed/regime_metrics.csv`.
 
 **Directional Accuracy (MDA %) by Volatility Regime:**
-- **Lasso**: Overall = 59.00% | High Vol = 58.33% | Low Vol = 59.21%
-- **ARIMA**: Overall = 57.00% | High Vol = 64.58% | Low Vol = 54.61%
-- **ARIMA+Lasso Hybrid**: Overall = 61.00% | High Vol = **66.67%** | Low Vol = 59.21%
-- **Gradient Boosting**: Overall = 55.00% | High Vol = 52.08% | Low Vol = 55.92%
-- **Random Forest**: Overall = 53.00% | High Vol = 43.75% | Low Vol = 55.92%
+- **Lasso**: Overall = 58.00% | High Vol = 60.42% | Low Vol = 57.24%
+- **ARIMA**: Overall = 57.00% | High Vol = **64.58%** | Low Vol = 54.61%
+- **ARIMAX**: Overall = 57.50% | High Vol = 62.50% | Low Vol = 55.92%
+- **Gradient Boosting (GB)**: Overall = 57.50% | High Vol = 62.50% | Low Vol = 55.92%
+- **ARIMA+Lasso Hybrid**: Overall = 56.50% | High Vol = 62.50% | Low Vol = 54.61%
+- **Random Forest (RF)**: Overall = 48.50% | High Vol = 52.08% | Low Vol = 47.37%
 
-**Key Takeaway**: Linear regularized models (Lasso, ARIMA) and the ARIMA+Lasso Hybrid perform **noticeably better during high-volatility weeks** than tree-based models do. The ARIMA+Lasso Hybrid shows the largest jump (59.21% → 66.67%), consistent with the idea that when major macro shocks (oil jumps, rate shifts, geopolitical shocks) occur, they exert a relatively linear directional pressure on the exchange rate that ARIMA's autoregressive structure plus Lasso's residual correction capture well. Random Forest is the clearest counterexample, *losing* 12 points of accuracy in high-vol weeks (55.92% → 43.75%) -- consistent with it overfitting to noisy training residuals and failing to generalize when the market actually moves. With only 48 high-volatility weeks in the test set, these regime-level splits should be read directionally, not as statistically precise estimates -- the sample is small enough that a handful of weeks swings the percentage by several points.
+**Key Takeaway**: Linear models (ARIMA, Lasso, ARIMAX) and Gradient Boosting perform **noticeably better during high-volatility weeks** than Random Forest does. ARIMA achieves the highest accuracy in high-volatility weeks (64.58%), followed by ARIMAX, Lasso, and ARIMA+Lasso Hybrid (all 60.0% or above). This is consistent with the idea that when major macro shocks (oil jumps, rate shifts, geopolitical shocks) occur, they exert a relatively linear directional pressure on the exchange rate that linear or boosting models capture well. Random Forest underperforms significantly, posting just 52.08% in high-volatility weeks, consistent with it overfitting to noisy training residuals and failing to generalize when the market actually moves. With only 48 high-volatility weeks in the test set, these regime-level splits should be read directionally.
 
 ### C. Overcoming the Meese-Rogoff Puzzle
 The **Meese-Rogoff Puzzle (1983)** is a famous thesis in international economics showing that structural exchange rate models (using fundamentals like oil, CPI, or rates) fail to outperform a simple **Random Walk** model out-of-sample. 
 In our platform:
-- The **Naïve Random Walk** achieves a competitive **0.331% MAPE** and serves as the baseline benchmark.
-- By transforming the data to first differences (ensuring stationarity), lagging features (eliminating look-ahead bias), and adding regularization, our **Lasso model (Theil's U = 0.9923)** and **ARIMA+Lasso Hybrid (Theil's U = 0.9966)** successfully beat the Naïve Random Walk.
+- The **Naïve Random Walk** achieves a competitive **0.333% MAPE** and serves as the baseline benchmark.
+- By transforming the data to first differences (ensuring stationarity), lagging features (eliminating look-ahead bias), and adding regularization, our **Lasso model (Theil's U = 0.9969)** and **ARIMA+Lasso Hybrid (Theil's U = 0.9992)** successfully beat the Naïve Random Walk.
 - This proves that macroeconomic and geopolitical fundamentals *do* contain predictive signals for USD/INR, but only when models are correctly specified to eliminate statistical bias.
 
-### D. The Success of ARIMA-ML Hybrid Models (Residual Correction)
-Classic economic forecasting often forces a choice between pure statistical time-series memory (e.g., ARIMA) and structural macroeconomic modeling (e.g., Lasso). The hybrid architecture reconciles these two schools of thought by:
-1. Fitting an **ARIMA(1,1,0)** model to capture linear autocorrelation (momentum).
-2. Saving the in-sample fitting errors (residuals): $e_t = y_t - \hat{y}_{t}^{\text{ARIMA}}$.
-3. Fitting a regularized machine learning model (Lasso or Gradient Boosting) on the lagged exogenous features ($X_{t-1}$) to predict these residuals: $\hat{e}_t = f(X_{t-1})$.
-4. Computing the final hybrid prediction as the sum of both components: $\hat{y}_t = \hat{y}_{t}^{\text{ARIMA}} + \hat{e}_t$.
+### D. The Performance of Structural vs. Hybrid Models
+Classic economic forecasting often forces a choice between pure statistical time-series memory (e.g., ARIMA) and structural macroeconomic modeling (e.g., Lasso). The hybrid architecture reconciles these two schools of thought by fitting ARIMA to capture linear momentum, saving residuals, and fitting Lasso/GB on exogenous lags to predict those residuals.
 
-The **ARIMA+Lasso Hybrid** is the top-performing strategy on the platform, generating a cumulative return of **+18.72%** and a Sharpe ratio of **1.37** over the 200-week test window. This shows that modeling linear market memory first, then using macro variables to correct model errors, produces a more robust trading signal than either model alone.
+Under the previous sparse binary event framework, the hybrid model was crucial to compensate for the sparsity of tension spikes. However, with the transition to dense, continuous, channel-specific GDELT tension indices, the raw exogenous signals contain continuous predictive power. This allows multivariate structural models (like **ARIMAX**, achieving **1.24 Sharpe** and **+16.82% return**) and non-linear learners (like **Gradient Boosting**, achieving **1.23 Sharpe** and **+16.68% return**) to learn stable relationships across transmission channels directly, outperforming the hybrid residual correction framework. This is a key quantitative insight: richer, denser feature spaces reduce the need for hybrid correction architectures.
 
 ---
 

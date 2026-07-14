@@ -22,9 +22,8 @@ def fetch_from_bigquery():
     if not HAS_BQ:
         raise RuntimeError("google-cloud-bigquery not installed.")
     
-    # Try to initialize BigQuery client
-    # BigQuery requires a project, we try to detect default credentials
-    client = bigquery.Client()
+    # Try to initialize BigQuery client with project ID
+    client = bigquery.Client(project=os.environ.get("GOOGLE_CLOUD_PROJECT", "rupeerisk-gdelt"))
     
     print("Querying GDELT via Google BigQuery (gdelt-bq.gdeltv2.events)...")
     
@@ -201,6 +200,12 @@ def main():
         'RiskOff_Global': 'goldstein_RiskOff_Global',
         'Combined': 'goldstein_Combined'
     }
+    
+    # Ensure all expected columns are present
+    for col in rename_dict.keys():
+        if col not in decayed_df.columns:
+            decayed_df[col] = 0.0
+            
     decayed_df = decayed_df.rename(columns=rename_dict)
     
     # Save output
