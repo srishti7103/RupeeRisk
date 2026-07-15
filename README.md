@@ -117,6 +117,31 @@ Ranked out-of-sample performance over the rolling weekly test window (numbers sh
 - **Tree-based model bifurcation**: While Gradient Boosting performs exceptionally well by picking up non-linear interactions across channel features, bagging-based Random Forest lags significantly (MDA 48.5%, Sharpe 0.28), highlighting that tree ensembles behave very differently on moderate-sized macroeconomic datasets.
 ---
 
+## Geopolitical Tension Feature Engineering & GDELT Sourcing
+
+Geopolitical risk features are modeled as continuous, decaying transmission channels derived from GDELT event data. The system supports two execution paths:
+
+1. **Google BigQuery Sourcing (Direct API)**:
+   Queries the public `gdelt-bq.gdeltv2.events` dataset for bilateral conflicts and oil supply events involving targeted Actor Country Codes (IND, PAK, CHN, RUS, UKR, and Middle East nations) between 2015 and 2026. Daily events are aggregated via a weighted mean of the GDELT `GoldsteinScale` (weighted by `NumMentions`).
+2. **High-Fidelity Local Fallback Engine**:
+   If BigQuery credentials/billing projects are not configured locally, `fetch_gdelt_data.py` falls back on a database of 14 curated historical geopolitical events. Each event is mapped to its standard CAMEO Goldstein scale severity score (ranging from -10.0 for military attacks to -5.0 for minor policy changes).
+
+### Transmission Channels & Curated Fallback Goldstein Scores:
+- **Direct FX (India-Pakistan)**: Uri Surgical Strikes (-10.0), Pulwama Attack (-10.0), Balakot Airstrike (-10.0), Operation Sindoor (-10.0).
+- **Direct FX (India-China)**: Galwan Valley Clash (-10.0).
+- **Oil Supply (Middle East)**: Gulf of Oman Tanker Attacks (-7.0), Saudi Aramco Drone Attack (-10.0), Soleimani Killing (-10.0), Israel-Hamas War (-10.0), Houthi Red Sea Attacks (-7.0), OPEC+ Production Cuts (-5.0).
+- **Risk-Off (Russia-Ukraine)**: Russia-Ukraine War Begins (-10.0).
+- **Global Risk-Off (RiskOff_Global)**: China Stock Market Crash (-5.0), COVID Global Lockdown (-7.0).
+
+### Signal Decay Logic:
+Tension is modeled by negating the conflict Goldstein scores (conflict events become positive tension) and calculating the exponentially decaying maximum across overlapping events over a 30-day window with a 7-day half-life:
+
+$$ \text{Tension}_t = \max_{0 \le \tau < 30} \left( \text{Severity}_{t-\tau} \times 0.5^{\tau / 7} \right) $$
+
+Under the local fallback engine, the `goldstein_RiskOff_Global` channel propagates the China Stock Market Crash (2015) and COVID Global Lockdown (2020) events, resulting in exactly **60 non-zero rows** (30 days of decay per event) in the processed index dataset.
+
+---
+
 ## Running the Project Locally
 
 ### 1. Installation
