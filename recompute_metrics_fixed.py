@@ -12,7 +12,8 @@ import json
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
 
 # ── 1. Load existing artifacts ──────────────────────────
-df = pd.read_csv("data/processed/master_df.csv", index_col=0, parse_dates=True)
+df = pd.read_csv("data/processed/master_df.csv", index_col=0)
+df.index = pd.to_datetime(df.index)
 weekly_levels = df["USDINR"].resample("W").mean().dropna()
 
 with open("data/processed/predictions.json") as f:

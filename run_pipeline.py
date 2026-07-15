@@ -14,7 +14,8 @@ warnings.filterwarnings("ignore")
 
 # Load data
 print("Loading data...")
-df = pd.read_csv("data/processed/master_df.csv", index_col=0, parse_dates=True)
+df = pd.read_csv("data/processed/master_df.csv", index_col=0)
+df.index = pd.to_datetime(df.index)
 
 # 1. Weekly resampling
 tension_cols = [

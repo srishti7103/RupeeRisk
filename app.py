@@ -14,7 +14,8 @@ st.set_page_config(
 
 # ── LOAD DATA ──────────────────────────────────────────
 def load_data():
-    df      = pd.read_csv("data/processed/master_df.csv",        index_col=0, parse_dates=True)
+    df      = pd.read_csv("data/processed/master_df.csv",        index_col=0)
+    df.index = pd.to_datetime(df.index)
     events  = pd.read_csv("data/raw/geopolitical_events.csv",    parse_dates=["date"])
     metrics = pd.read_csv("data/processed/model_metrics.csv",    index_col=0)
     return df, events, metrics
