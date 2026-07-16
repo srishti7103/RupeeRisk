@@ -482,7 +482,7 @@ try:
                 Exchange rates represent financial asset levels which are highly **non-stationary** and exhibit a near-perfect random walk structure. 
                 In forecasting, predicting next week's rate *y*<sub>*t*+1</sub> from today's rate *y*<sub>*t*</sub> is modeled by forecasting the **weekly change** (Δ*y*<sub>*t*+1</sub>):
                 
-                $$ \hat{y}_{t+1} = y_t + \Delta \hat{y}_{t+1} $$
+                $$ \hat{{y}}_{{t+1}} = y_t + \Delta \hat{{y}}_{{t+1}} $$
                 
                 Because the expected weekly change (Δŷ<sub>*t*+1</sub>) is extremely small (typically 5 to 15 paise, or 0.05% to 0.15%) relative to the massive baseline exchange rate level (*y*<sub>*t*</sub> ≈ ₹95.00+), the baseline level *y*<sub>*t*</sub> dominates 99% of the predicted value. 
                 This is why the prediction line looks like a "copy-paste" of the actual line shifted exactly 1 week to the right. 
