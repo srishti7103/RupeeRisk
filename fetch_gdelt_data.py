@@ -91,11 +91,23 @@ def process_gdelt_raw(df_raw):
         .apply(weighted_goldstein)
         .unstack(fill_value=0)
     )
-    
     # Reindex to full daily range
     idx = pd.date_range(start=START_DATE, end=END_DATE)
     daily = daily.reindex(idx, fill_value=0)
     
+    if 'RiskOff_Global' not in daily.columns:
+        daily['RiskOff_Global'] = 0.0
+        
+    # Overlay curated global events since BQ country-pair queries won't catch global shocks
+    global_fallbacks = {
+        "2015-08-24": -5.0,  # China Stock Market Crash
+        "2020-03-23": -7.0,  # COVID Global Lockdown
+    }
+    for date_str, score in global_fallbacks.items():
+        dt = pd.to_datetime(date_str)
+        if dt in daily.index:
+            daily.loc[dt, 'RiskOff_Global'] = score
+            
     return daily
 
 def run_decay_signal(daily_scores):
