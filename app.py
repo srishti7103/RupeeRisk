@@ -276,6 +276,9 @@ if run_update:
 st.divider()
 
 # ── KEY METRICS BAR ────────────────────────────────────
+csv_date = df.index[-1].strftime('%d %b %Y')
+csv_date_short = df.index[-1].strftime('%d %b')
+
 col1, col2, col3, col4 = st.columns(4)
 current_inr = df["USDINR"].dropna().iloc[-1]
 
@@ -289,7 +292,7 @@ if live_rate is not None:
     )
 else:
     col1.metric(
-        "USD/INR Spot (Stale)", 
+        f"USD/INR Spot (as of {csv_date_short})", 
         f"₹ {current_inr:.4f}", 
         help="Last historical closing price in the dataset"
     )
@@ -332,7 +335,6 @@ col4.metric(
 )
 
 # ── DATA TIMESTAMP & SPOT VS AVERAGE NOTICE ────────────
-csv_date = df.index[-1].strftime('%d %b %Y')
 st.info(
     f"💡 **Model Baseline vs. Live Spot Rate**: Predictive models are trained on historical **weekly averages** (resampled to week ending **{csv_date}**). "
     f"The live spot rate represents the real-time daily closing price. To avoid confusion, both values are displayed above.",
