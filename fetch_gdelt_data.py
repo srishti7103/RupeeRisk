@@ -76,9 +76,10 @@ def process_gdelt_raw(df_raw):
         elif a1 in ['IRN','ISR','SAU','IRQ','YEM','ARE','KWT','SYR','LBN'] and a2 in ['IRN','ISR','SAU','IRQ','YEM','ARE','KWT','SYR','LBN']:
             return 'OilSupply'
         else:
-            return 'RiskOff_Global'
+            return None
 
     df_raw['channel'] = df_raw.apply(get_channel, axis=1)
+    df_raw = df_raw.dropna(subset=['channel'])
     
     # For each date and channel, compute weighted mean of GoldsteinScale (weighted by NumMentions)
     def weighted_goldstein(group):
@@ -91,23 +92,11 @@ def process_gdelt_raw(df_raw):
         .apply(weighted_goldstein)
         .unstack(fill_value=0)
     )
+    
     # Reindex to full daily range
     idx = pd.date_range(start=START_DATE, end=END_DATE)
     daily = daily.reindex(idx, fill_value=0)
     
-    if 'RiskOff_Global' not in daily.columns:
-        daily['RiskOff_Global'] = 0.0
-        
-    # Overlay curated global events since BQ country-pair queries won't catch global shocks
-    global_fallbacks = {
-        "2015-08-24": -5.0,  # China Stock Market Crash
-        "2020-03-23": -7.0,  # COVID Global Lockdown
-    }
-    for date_str, score in global_fallbacks.items():
-        dt = pd.to_datetime(date_str)
-        if dt in daily.index:
-            daily.loc[dt, 'RiskOff_Global'] = score
-            
     return daily
 
 def run_decay_signal(daily_scores):
@@ -147,7 +136,7 @@ def run_decay_signal(daily_scores):
     decayed_df = pd.DataFrame(decayed_cols, index=daily_scores.index)
     return decayed_df
 
-# Fallback: generating from the 14 curated events with CAMEO Goldstein severity mappings
+# Fallback: generating from the 12 curated events with CAMEO Goldstein severity mappings
 def generate_fallback():
     print("No BigQuery credentials or authentication. Running fallback high-fidelity GDELT-style local engine...")
     
@@ -165,13 +154,11 @@ def generate_fallback():
         {"date":"2023-11-19","event":"Houthi Red Sea Attacks","channel":"OilSupply","goldstein":-7.0},
         {"date":"2022-02-24","event":"Russia-Ukraine War Begins","channel":"RiskOff_RusUkr","goldstein":-10.0},
         {"date":"2022-10-05","event":"OPEC+ Production Cuts","channel":"OilSupply","goldstein":-5.0},
-        {"date":"2015-08-24","event":"China Stock Market Crash","channel":"RiskOff_Global","goldstein":-5.0},
-        {"date":"2020-03-23","event":"COVID Global Lockdown","channel":"RiskOff_Global","goldstein":-7.0},
     ]
     
     # Create daily index
     idx = pd.date_range(start=START_DATE, end=END_DATE)
-    channels = ["DirectFX_IndiaPak", "DirectFX_IndiaChina", "OilSupply", "RiskOff_RusUkr", "RiskOff_Global"]
+    channels = ["DirectFX_IndiaPak", "DirectFX_IndiaChina", "OilSupply", "RiskOff_RusUkr"]
     daily_scores = pd.DataFrame(0.0, index=idx, columns=channels)
     
     for ev in curated:
@@ -209,7 +196,6 @@ def main():
         'DirectFX_IndiaChina': 'goldstein_DirectFX_IndiaChina',
         'OilSupply': 'goldstein_OilSupply',
         'RiskOff_RusUkr': 'goldstein_RiskOff_RusUkr',
-        'RiskOff_Global': 'goldstein_RiskOff_Global',
         'Combined': 'goldstein_Combined'
     }
     

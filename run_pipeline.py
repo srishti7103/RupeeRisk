@@ -23,8 +23,7 @@ tension_cols = [
     "Geo_Tension_DirectFX_IndiaPak", 
     "Geo_Tension_DirectFX_IndiaChina", 
     "Geo_Tension_OilSupply", 
-    "Geo_Tension_RiskOff_RusUkr", 
-    "Geo_Tension_RiskOff_Global"
+    "Geo_Tension_RiskOff_RusUkr"
 ]
 weekly = df[["USDINR", "CRUDE", "DXY", "Rate_Spread"] + tension_cols].resample("W").mean()
 weekly.dropna(inplace=True)

@@ -158,8 +158,7 @@ if os.path.exists(gdelt_path):
         'goldstein_DirectFX_IndiaPak': 'Geo_Tension_DirectFX_IndiaPak',
         'goldstein_DirectFX_IndiaChina': 'Geo_Tension_DirectFX_IndiaChina',
         'goldstein_OilSupply': 'Geo_Tension_OilSupply',
-        'goldstein_RiskOff_RusUkr': 'Geo_Tension_RiskOff_RusUkr',
-        'goldstein_RiskOff_Global': 'Geo_Tension_RiskOff_Global'
+        'goldstein_RiskOff_RusUkr': 'Geo_Tension_RiskOff_RusUkr'
     }
     gdelt_df = gdelt_df.rename(columns=col_mapping)
     master_df = master_df.join(gdelt_df, how="left")
@@ -171,7 +170,6 @@ else:
     master_df["Geo_Tension_DirectFX_IndiaChina"] = 0.0
     master_df["Geo_Tension_OilSupply"] = 0.0
     master_df["Geo_Tension_RiskOff_RusUkr"] = 0.0
-    master_df["Geo_Tension_RiskOff_Global"] = 0.0
 
 master_df["Month"] = master_df.index.month
 master_df["Year"]  = master_df.index.year

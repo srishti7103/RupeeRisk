@@ -512,8 +512,7 @@ with st.container(border=True):
         "Direct FX (India-Pakistan)": "Geo_Tension_DirectFX_IndiaPak",
         "Direct FX (India-China)": "Geo_Tension_DirectFX_IndiaChina",
         "Oil Supply (Middle East)": "Geo_Tension_OilSupply",
-        "Risk-Off (Russia-Ukraine)": "Geo_Tension_RiskOff_RusUkr",
-        "Risk-Off (Global)": "Geo_Tension_RiskOff_Global"
+        "Risk-Off (Russia-Ukraine)": "Geo_Tension_RiskOff_RusUkr"
     }
     # Keep only those columns present in the dataframe
     tension_channels = {k: v for k, v in tension_channels.items() if v in df.columns}
@@ -532,8 +531,7 @@ with st.container(border=True):
             "Geo_Tension_DirectFX_IndiaPak": "#2563EB",
             "Geo_Tension_DirectFX_IndiaChina": "#1E3A8A",
             "Geo_Tension_OilSupply": "#F59E0B",
-            "Geo_Tension_RiskOff_RusUkr": "#10B981",
-            "Geo_Tension_RiskOff_Global": "#8B5CF6"
+            "Geo_Tension_RiskOff_RusUkr": "#10B981"
         }
         
         for name in selected_channels:
@@ -591,7 +589,6 @@ with st.expander("💡 Lasso Model Feature Intelligence & Coefficients"):
                 "Geo_Tension_DirectFX_IndiaChina_lag1": "India-China Tension (1w lag)",
                 "Geo_Tension_OilSupply_lag1": "Oil Supply Tension (1w lag)",
                 "Geo_Tension_RiskOff_RusUkr_lag1": "Russia-Ukraine Tension (1w lag)",
-                "Geo_Tension_RiskOff_Global_lag1": "Global Risk-Off Tension (1w lag)",
                 "inr_mom_4w": "4-Week INR Momentum",
                 "inr_mom_12w": "12-Week INR Momentum",
                 "is_fiscal_yr_end": "Fiscal Year-End Dummy (March)",
@@ -823,7 +820,7 @@ with st.expander("🧮 Macro & Geopolitical Correlation Analysis"):
         corr_cols = [
             "USDINR", "CRUDE", "GOLD", "DXY", "NIFTY", "INDIAVIX", "Rate_Spread", 
             "Geo_Tension", "Geo_Tension_DirectFX_IndiaPak", "Geo_Tension_DirectFX_IndiaChina", 
-            "Geo_Tension_OilSupply", "Geo_Tension_RiskOff_RusUkr", "Geo_Tension_RiskOff_Global"
+            "Geo_Tension_OilSupply", "Geo_Tension_RiskOff_RusUkr"
         ]
         corr_cols = [c for c in corr_cols if c in df.columns]
         corr = df[corr_cols].dropna().corr()
