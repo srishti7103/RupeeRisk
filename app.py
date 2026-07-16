@@ -109,9 +109,27 @@ div[data-baseweb="select"] {
     border-radius: 8px !important;
     border: 1px solid #CBD5E1 !important;
 }
-div[role="listbox"] {
+div[role="listbox"], [data-baseweb="popover"] {
     background-color: #FFFFFF !important;
     border: 1px solid #CBD5E1 !important;
+}
+div[role="option"], 
+div[role="option"] *, 
+[data-baseweb="popover"] li, 
+[data-baseweb="popover"] li * {
+    color: #2D3748 !important;
+}
+div[role="option"], 
+[data-baseweb="popover"] li {
+    background-color: #FFFFFF !important;
+    transition: background-color 0.15s ease;
+}
+div[role="option"]:hover, 
+div[role="option"]:hover *, 
+[data-baseweb="popover"] li:hover, 
+[data-baseweb="popover"] li:hover * {
+    background-color: #F1F5F9 !important;
+    color: #1A202C !important;
 }
 
 /* Custom styling for Streamlit native bordered containers */
