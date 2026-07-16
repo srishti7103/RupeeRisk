@@ -95,26 +95,27 @@ Ranked out-of-sample performance over the rolling weekly test window (numbers sh
 
 | Model                   | MAPE (%) | RMSE   | MDA (%) | Sharpe Ratio (Rf=0) | Sharpe Ratio (Rf=6.5%) | Cumulative Return (%) |
 | ------------------------ | -------- | ------ | ------- | -------------------- | ---------------------- | ---------------------- |
-| **ARIMAX**                | 0.341%   | 0.407  | 57.5%   | **1.24**             | **-0.73**              | **+16.82%**            |
-| **Gradient Boosting (GB)**| 0.349%   | 0.406  | 57.5%   | 1.23                 | -0.74                  | +16.68%                |
-| **Lasso**                 | 0.337%   | 0.403  | **58.0%**| 1.09                 | -0.88                  | +14.60%                |
-| **ARIMA+Lasso Hybrid**    | 0.337%   | 0.404  | 56.5%   | 1.06                 | -0.90                  | +14.20%                |
-| **ARIMA**                 | **0.328%**| 0.405  | 57.0%   | 0.95                 | -1.02                  | +12.57%                |
-| **ARIMA+GB Hybrid**       | 0.347%   | 0.418  | 57.0%   | 0.84                 | -1.12                  | +11.11%                |
-| **Random Forest (RF)**    | 0.354%   | 0.413  | 48.5%   | 0.28                 | -1.67                  | +3.43%                 |
-| **Naive Random Walk**     | 0.333%   | 0.404  | 0.0%*   | 0.00                 | 0.00                   | +0.00%                 |
-| **Exponential Smoothing** | 0.333%   | 0.404  | 43.0%   | -0.95                | -2.91                  | -11.55%                |
+| **ARIMA+Lasso Hybrid**    | 0.330%   | **0.401**| **61.5%**| **1.43**             | **-0.55**              | **+19.58%**            |
+| **Lasso**                 | 0.335%   | 0.402  | 59.5%   | 1.09                 | -0.87                  | +14.66%                |
+| **ARIMA**                 | **0.328%**| 0.405  | 57.5%   | 1.00                 | -0.96                  | +13.39%                |
+| **ARIMA+GB Hybrid**       | 0.363%   | 0.431  | 58.0%   | 0.96                 | -1.00                  | +12.79%                |
+| **ARIMAX**                | 0.339%   | 0.406  | 57.0%   | 0.82                 | -1.13                  | +10.83%                |
+| **Gradient Boosting (GB)**| 0.360%   | 0.429  | 55.5%   | 0.55                 | -1.39                  | +7.11%                 |
+| **Random Forest (RF)**    | 0.389%   | 0.447  | 53.5%   | -0.07                | -2.01                  | -1.16%                 |
+| **Naive Random Walk**     | 0.335%   | 0.405  | 0.0%*   | 0.00                 | 0.00                   | +0.00%                 |
+| **Exponential Smoothing** | 0.335%   | 0.405  | 42.5%   | -1.00                | -2.96                  | -12.19%                |
 
 *\* Naive MDA is 0.00% by our `directional_accuracy()` definition, since it always predicts "no change" (direction = 0), which never matches an actual non-zero direction. It remains the Theil's U = 1.0 benchmark every other model must beat.*
 
 ### Key Quantitative Takeaways:
 
-- **ARIMAX and Gradient Boosting (GB) dominate risk-adjusted returns**: With the transition to dense, channel-specific GDELT tension indices, multivariate models are supplied with continuous, rich signals. ARIMAX achieves the top Sharpe ratio of **1.24** (+16.82% cumulative return), and Gradient Boosting achieves **1.23** (+16.68% cumulative return).
-- **Lasso is the most accurate directional predictor**: Standalone Lasso L1 regularization achieves the highest Mean Directional Accuracy (**58.0%**) and beats the Random Walk baseline (**Theil's U = 0.9969**).
-- **Carry Cost Hurdle & Sharpe Disclosures**: The Sharpe Ratios reported with Rf=0 represent Information Ratios — excess return per unit of volatility relative to zero. When adjusted for India's 91-day Treasury Bill rate (~6.5% annualised, ~0.125% per week), the Sharpe Ratios for all models turn negative (ARIMAX: **-0.73**, GB: **-0.74**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime. The project's value lies in demonstrating forecasting skill (Theil's U < 1, MDA > 50%) rather than a standalone trading strategy.
+- **ARIMA+Lasso Hybrid leads overall performance**: With continuous, channel-specific GDELT tension indices, the hybrid model error-corrects ARIMA's linear momentum using Lasso's exogenous predictions. It achieves the top Sharpe ratio (Rf=0) of **1.43** and a cumulative return of **+19.58%**.
+- **Lasso is a highly accurate directional predictor**: Standalone Lasso L1 regularization achieves a high Mean Directional Accuracy (**59.5%**) and out-forecasts the Random Walk baseline (**Theil's U = 0.9917**), yielding **+14.66% return** with a **1.09 Sharpe**.
+- **Carry Cost Hurdle & Sharpe Disclosures**: The Sharpe Ratios reported with Rf=0 represent Information Ratios — excess return per unit of volatility relative to zero. When adjusted for India's 91-day Treasury Bill rate (~6.5% annualised, ~0.125% per week), the Sharpe Ratios for all models turn negative (ARIMA+Lasso: **-0.55**, Lasso: **-0.87**). This reveals a critical quantitative insight: systematic directional trading of USD/INR is subject to a substantial carry hurdle in a low-volatility, central-bank-defended exchange rate regime. The project's value lies in demonstrating forecasting skill (Theil's U < 1, MDA > 50%) rather than a standalone trading strategy.
 - **Multicollinearity & regularized feature selection**: Lasso's L1 regularization successfully selects the most predictive channel-specific tension features (e.g. Russia-Ukraine war and global Risk-Off tension lags) while driving redundant noise to zero, preventing the coefficient blowup that typically compromises standard ARIMAX.
 - **Overperforming the Random Walk**: Theil's U < 1 for Lasso and the ARIMA+Lasso hybrid validates that macroeconomic and geopolitical fundamentals carry genuine out-of-sample predictive signals once look-ahead bias and non-stationarity are correctly handled.
-- **Tree-based model bifurcation**: While Gradient Boosting performs exceptionally well by picking up non-linear interactions across channel features, bagging-based Random Forest lags significantly (MDA 48.5%, Sharpe 0.28), highlighting that tree ensembles behave very differently on moderate-sized macroeconomic datasets.
+- **Tree-based model performance**: Gradient Boosting performs reasonably well (+7.11% return), but bagging-based Random Forest lags significantly (MDA 53.5%, Sharpe -0.07), highlighting that tree ensembles behave very differently on moderate-sized macroeconomic datasets and can overfit to residuals.
+
 ---
 
 ## Geopolitical Tension Feature Engineering & GDELT Sourcing
