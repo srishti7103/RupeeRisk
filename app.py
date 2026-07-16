@@ -326,12 +326,30 @@ else:
     col3.metric("Forecasted Week Average", "N/A")
 
 # Out of sample accuracy
-lasso_mape = metrics.loc["lasso", "MAPE (%)"]
-lasso_accuracy = 100 - lasso_mape
+model_key_mapping = {
+    "ARIMA_Baseline": "arima",
+    "ARIMAX": "arimax",
+    "Lasso": "lasso",
+    "Random_Forest": "rf",
+    "Gradient_Boosting": "gb",
+    "ARIMA+Lasso_Hybrid": "arima_lasso",
+    "ARIMA+Gradient_Boosting_Hybrid": "arima_gb"
+}
+
+if next_week_signal is not None:
+    model_type_str = next_week_signal.get("model_type", "ARIMA+Lasso_Hybrid")
+    model_key = model_key_mapping.get(model_type_str, "lasso")
+else:
+    model_type_str = "ARIMA+Lasso_Hybrid"
+    model_key = "arima_lasso"
+
+winning_mape = metrics.loc[model_key, "MAPE (%)"]
+winning_accuracy = 100 - winning_mape
+
 col4.metric(
         "Model Forecast Accuracy", 
-        f"{lasso_accuracy:.3f}%", 
-        help="Based on a 200-week out-of-sample rolling backtest (100% - Mean Absolute Percentage Error)"
+        f"{winning_accuracy:.3f}%", 
+        help=f"Based on a 200-week out-of-sample rolling backtest of the {model_type_str.replace('_', ' ').replace('+', ' + ')} model (100% - Mean Absolute Percentage Error)"
 )
 
 # ── DATA TIMESTAMP & SPOT VS AVERAGE NOTICE ────────────
